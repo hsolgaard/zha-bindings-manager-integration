@@ -64,6 +64,23 @@ existing browser-local data into shared storage (or start fresh). From
 then on the card shows whether it's using shared storage or browser-only
 storage, right on the card itself.
 
+## Notices when a bound device is removed
+
+From version 0.2.0 the backend also watches for devices being removed from
+ZHA. If other devices still have bindings to the removed one, according to
+the card's last scan, Home Assistant shows a notification that names them.
+Those bindings use slots in each device's binding table and send commands
+to nobody.
+
+- If you removed the device to pair it again, ignore the notice. Once the
+  device is back with the same address its bindings work again, and the
+  notice is dismissed automatically.
+- If the device is gone for good, open the card's Bindings tab and click
+  **Unbind all** in the banner above the table (card 0.36.4 or later).
+
+The backend never unbinds anything itself and never changes the card's
+saved data. It only reads it to write the notice.
+
 ## Removing it
 
 Uninstalling this integration doesn't delete anything the card has saved

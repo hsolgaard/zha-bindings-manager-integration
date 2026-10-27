@@ -12,4 +12,4 @@ DOMAIN = "zha_bindings_manager"
 STORAGE_VERSION = 1
 STORAGE_KEY = f"{DOMAIN}/state"
 
-BACKEND_VERSION = "0.1.0"
+BACKEND_VERSION = "0.2.0"
