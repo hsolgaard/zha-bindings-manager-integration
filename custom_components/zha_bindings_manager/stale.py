@@ -80,7 +80,7 @@ def removal_message(device_name: str, ieee: str, sources: dict[str, int], names:
         "These bindings use slots in each device's binding table and send commands to nobody.\n\n"
         "- **Pairing it again?** Ignore this. Once it's back with the same address the bindings work again, "
         "and this notice is dismissed automatically.\n"
-        "- **Gone for good?** Open ZHA Bindings Manager, go to the Bindings tab and click **Unbind all** in the "
-        "banner above the table.\n\n"
+        "- **Gone for good?** Open ZHA Bindings Manager (the **ZHA Bindings** page in the sidebar), go to the "
+        "Bindings tab and click **Unbind all** in the banner above the table.\n\n"
         "_Based on the card's last scan of those devices._"
     )

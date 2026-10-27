@@ -1,0 +1,3 @@
+# Test-only dependencies (not used by the integration itself).
+pytest-homeassistant-custom-component
+home-assistant-frontend

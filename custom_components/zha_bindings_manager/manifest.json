@@ -1,13 +1,15 @@
 {
   "domain": "zha_bindings_manager",
-  "name": "ZHA Bindings Manager Backend",
-  "after_dependencies": ["zha"],
+  "name": "ZHA Bindings Manager",
+  "after_dependencies": ["lovelace", "zha"],
   "codeowners": ["@hsolgaard"],
   "config_flow": true,
-  "documentation": "https://github.com/hsolgaard/zha-bindings-manager-backend",
-  "issue_tracker": "https://github.com/hsolgaard/zha-bindings-manager-backend/issues",
+  "dependencies": ["frontend", "http", "panel_custom"],
+  "documentation": "https://github.com/hsolgaard/zha-bindings-manager-integration",
+  "integration_type": "service",
   "iot_class": "local_push",
+  "issue_tracker": "https://github.com/hsolgaard/zha-bindings-manager-integration/issues",
   "requirements": [],
   "single_config_entry": true,
-  "version": "0.2.0"
+  "version": "1.0.0"
 }

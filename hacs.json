@@ -1,5 +1,5 @@
 {
-  "name": "ZHA Bindings Manager Backend",
+  "name": "ZHA Bindings Manager",
   "render_readme": true,
-  "homeassistant": "2023.7.0"
+  "homeassistant": "2024.7.0"
 }

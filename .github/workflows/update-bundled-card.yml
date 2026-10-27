@@ -1,0 +1,88 @@
+# Opens a pull request "Update bundled card to vX.Y.Z" when a newer card
+# release exists in hsolgaard/zha-bindings-manager.
+#
+# The card and this integration share one version number, so the PR also
+# sets this integration's version to match (manifest.json and
+# const.BACKEND_VERSION). Review it, add any integration changes for the
+# same release, merge, then publish a release with the same tag.
+#
+# Runs daily; after publishing a card release you can also run it straight
+# away from the Actions tab ("Run workflow").
+#
+# Needs: Settings → Actions → General → "Allow GitHub Actions to create and
+# approve pull requests".
+name: Update bundled card
+
+on:
+  schedule:
+    - cron: "41 5 * * *"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Card release tag to bundle (blank = latest release)"
+        required: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Find the card release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+        run: |
+          tag="${INPUT_TAG:-$(gh api repos/hsolgaard/zha-bindings-manager/releases/latest --jq .tag_name)}"
+          version="${tag#v}"
+          current="$(python3 -c 'import json;print(json.load(open("custom_components/zha_bindings_manager/frontend/card_version.json"))["card_version"])')"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [ "$version" = "$current" ]; then
+            echo "Bundled card is already $current."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Bundled card $current, card release $version."
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Copy the card and set the version
+        if: steps.release.outputs.changed == 'true'
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          dir=custom_components/zha_bindings_manager
+          curl -fsSL "https://raw.githubusercontent.com/hsolgaard/zha-bindings-manager/${TAG}/zha-binding-map-card.js" \
+            -o "$dir/frontend/zha-binding-map-card.js"
+          grep -q "CARD_VERSION = \"${VERSION}\"" "$dir/frontend/zha-binding-map-card.js" \
+            || { echo "The card file at ${TAG} doesn't say it is ${VERSION}."; exit 1; }
+          python3 - <<'PY'
+          import json, os, re
+          v, tag = os.environ["VERSION"], os.environ["TAG"]
+          d = "custom_components/zha_bindings_manager"
+          with open(f"{d}/frontend/card_version.json", "w") as f:
+              json.dump({"card_version": v, "source": f"https://github.com/hsolgaard/zha-bindings-manager/releases/tag/{tag}"}, f, indent=2)
+              f.write("\n")
+          m = open(f"{d}/manifest.json").read()
+          open(f"{d}/manifest.json", "w").write(re.sub(r'"version": "[^"]+"', f'"version": "{v}"', m))
+          c = open(f"{d}/const.py").read()
+          open(f"{d}/const.py", "w").write(re.sub(r'BACKEND_VERSION = "[^"]+"', f'BACKEND_VERSION = "{v}"', c))
+          PY
+
+      - name: Open the pull request
+        if: steps.release.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: update-bundled-card
+          title: Update bundled card to ${{ steps.release.outputs.tag }}
+          commit-message: Update bundled card to ${{ steps.release.outputs.tag }}
+          body: |
+            Bundles card [${{ steps.release.outputs.tag }}](https://github.com/hsolgaard/zha-bindings-manager/releases/tag/${{ steps.release.outputs.tag }}) and sets this integration's version to ${{ steps.release.outputs.version }} (one version number for both).
+
+            Before merging: add any integration changes for this release. After merging: publish a release tagged `${{ steps.release.outputs.tag }}`.

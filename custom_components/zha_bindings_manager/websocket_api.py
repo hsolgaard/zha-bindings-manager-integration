@@ -1,12 +1,12 @@
-"""WebSocket API for ZHA Bindings Manager Backend.
+"""WebSocket API for the ZHA Bindings Manager integration.
 
 Three commands, deliberately minimal — no patch_state, no
 subscribe_updates, no list_instances/delete_instance until something
 actually needs them:
 
-  get_capabilities — feature detection. The frontend calls this once at
-    load; the response existing at all is what it treats as "backend
-    installed" (no version/schema negotiation matrix, just "here I am").
+  get_capabilities — feature detection. The card calls this once at
+    load; a response means "integration installed". It also carries the
+    version, the bundled card's version and which options are switched on.
   get_state — returns the whole stored state blob for one card instance,
     plus the updated_at timestamp it was last saved with.
   save_state — writes the whole state blob for one card instance.
@@ -26,7 +26,18 @@ from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import storage
 
-from .const import BACKEND_VERSION, DOMAIN, STORAGE_KEY, STORAGE_VERSION
+from .const import (
+    BACKEND_VERSION,
+    DOMAIN,
+    OPT_LOAD_EVERYWHERE,
+    OPT_REMOVAL_NOTICES,
+    OPT_SHARED_STORAGE,
+    OPT_SIDEBAR_PANEL,
+    STORAGE_KEY,
+    STORAGE_VERSION,
+)
+from .card_frontend import bundled_card_version
+from .options import current_options
 
 
 def _now_iso() -> str:
@@ -65,9 +76,26 @@ async def _load(hass: HomeAssistant) -> dict[str, Any]:
 async def websocket_get_capabilities(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
-    """Feature-detection call — the frontend treats a successful response
-    here as "the backend is installed", nothing more."""
-    connection.send_result(msg["id"], {"available": True, "version": BACKEND_VERSION})
+    """Feature detection. A response means the integration is installed.
+
+    Since 1.0.0 it also reports the bundled card's version (the card warns
+    if the page is running a different copy) and which options are on (the
+    card uses shared storage only when shared_storage is true)."""
+    opts = current_options(hass)
+    connection.send_result(
+        msg["id"],
+        {
+            "available": True,
+            "version": BACKEND_VERSION,
+            "bundled_card_version": bundled_card_version(),
+            "features": {
+                "shared_storage": opts[OPT_SHARED_STORAGE],
+                "sidebar_panel": opts[OPT_SIDEBAR_PANEL],
+                "load_card_everywhere": opts[OPT_LOAD_EVERYWHERE],
+                "removal_notices": opts[OPT_REMOVAL_NOTICES],
+            },
+        },
+    )
 
 
 @websocket_api.websocket_command(

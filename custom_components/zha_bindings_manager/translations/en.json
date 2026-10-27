@@ -2,12 +2,38 @@
   "config": {
     "step": {
       "user": {
-        "title": "Add ZHA Bindings Manager Backend",
-        "description": "Optional persistent storage for the ZHA Bindings Manager card. Nothing to configure — this just makes shared storage available; the card will offer to use it the next time it loads. You can remove this integration later without losing anything saved locally in your browser."
+        "title": "Add ZHA Bindings Manager",
+        "description": "Adds the ZHA Bindings Manager card to Home Assistant, with a ZHA Bindings page in the sidebar (admins only), shared storage so the card's data is the same in every browser, and a notice when you remove a device that others are bound to. There's nothing to fill in; each feature can be switched off later under Configure.\n\nIf you installed the ZHA Bindings Manager card from HACS, remove it after adding this: the integration includes the card."
       }
     },
     "abort": {
-      "already_configured": "ZHA Bindings Manager Backend is already set up. Only one instance is needed."
+      "already_configured": "ZHA Bindings Manager is already set up. Only one is needed."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "ZHA Bindings Manager options",
+        "description": "Changes apply straight away. Refresh any open browser tabs afterwards.",
+        "data": {
+          "sidebar_panel": "Show the ZHA Bindings page in the sidebar",
+          "load_card_everywhere": "Load the card on every page",
+          "shared_storage": "Shared storage",
+          "removal_notices": "Notify when a removed device still has bindings pointing to it"
+        },
+        "data_description": {
+          "sidebar_panel": "Admins only. Runs the card full-page. The card's file loads only when you open this page.",
+          "load_card_everywhere": "Only needed to put the card on your own dashboards. The card is about 380 KB, and with this on every page loads it, including on phones and tablets that never open it.",
+          "shared_storage": "Saves the card's data in Home Assistant, so it's the same in every browser and on every device. When off, each browser keeps its own copy.",
+          "removal_notices": "Shows a Home Assistant notification naming the devices still bound to a device you remove, based on the card's last scan."
+        }
+      }
+    }
+  },
+  "issues": {
+    "card_installed_twice": {
+      "title": "ZHA Bindings Manager card is installed twice",
+      "description": "The ZHA Bindings Manager card is also installed from HACS (Lovelace resource `{resource}`). This integration already includes the card, so the two copies compete for the page and the one that runs may be out of date.\n\nRemove **ZHA Bindings Manager** from HACS → Frontend (HACS also removes its Lovelace resource). If you use the card on your own dashboards, first turn on **Load the card on every page** under Settings → Devices & services → ZHA Bindings Manager → Configure.\n\nThis notice disappears after the next restart once the HACS card is gone."
     }
   }
 }
