@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.1]
+
+Includes card [1.0.1](https://github.com/hsolgaard/zha-bindings-manager/releases/tag/v1.0.1): removing a device from ZHA is
+now picked up straight away, without refreshing the browser, and removed devices keep their name in the Bindings
+table. No integration changes.
+
 ## [1.0.0]
 
 ZHA Bindings Manager Backend becomes the **ZHA Bindings Manager integration**. It now includes the card (1.0.0) and
