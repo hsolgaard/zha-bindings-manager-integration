@@ -63,8 +63,13 @@ def async_setup_removal_watch(hass: HomeAssistant) -> CALLBACK_TYPE:
         if ieee:
             known[device.id] = (ieee, _device_name(device))
 
-    for device in registry.devices.values():
-        remember(device)
+    # ZHA devices that already exist, found through ZHA's own config entries.
+    # (Reading registry.devices as a mapping is deprecated from HA 2026.10 and
+    # stops working in 2027.9; async_entries_for_config_entry works on every
+    # supported version.) Devices added later arrive through the events below.
+    for zha_entry in hass.config_entries.async_entries(ZHA_DOMAIN):
+        for device in dr.async_entries_for_config_entry(registry, zha_entry.entry_id):
+            remember(device)
 
     def names_by_ieee() -> dict[str, str]:
         return {ieee: name for ieee, name in known.values()}

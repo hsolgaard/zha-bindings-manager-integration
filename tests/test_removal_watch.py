@@ -96,3 +96,18 @@ async def test_stops_watching_after_unload(hass: HomeAssistant):
     reg.async_remove_device(devices[BULB].id)
     await hass.async_block_till_done()
     assert notification_id(DOMAIN, BULB) not in _notices(hass)
+
+
+
+def test_no_direct_registry_devices_access():
+    """registry.devices as a mapping is deprecated from HA 2026.10 and stops
+    working in 2027.9. Use dr.async_entries_for_config_entry / async_get.
+    (Pre-existing devices being found is covered by the notice tests above,
+    which create the devices before the integration is set up.)"""
+    import re
+    from pathlib import Path
+
+    src_dir = Path(__file__).parent.parent / "custom_components" / DOMAIN
+    for path in src_dir.glob("*.py"):
+        code = "\n".join(line for line in path.read_text().splitlines() if not line.lstrip().startswith("#"))
+        assert not re.search(r"\.devices\s*(\.|\[)", code), f"{path.name} reads registry.devices directly"

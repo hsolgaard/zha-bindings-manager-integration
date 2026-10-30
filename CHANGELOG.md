@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.2]
+
+### Fixed
+
+- **No more deprecation warning in the Home Assistant log.** At startup the integration looked up existing ZHA
+  devices in a way Home Assistant deprecated in 2026.10 (it logged "uses `device_registry.devices` as a mapping",
+  and it would stop working in 2027.9). It now uses the supported lookup. Nothing else changes. Thanks to MattWestb
+  for the report.
+
+Includes card [1.0.2](https://github.com/hsolgaard/zha-bindings-manager/releases/tag/v1.0.2), which has no changes.
+
 ## [1.0.1]
 
 Includes card [1.0.1](https://github.com/hsolgaard/zha-bindings-manager/releases/tag/v1.0.1): removing a device from ZHA is
