@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.3]
+
+Includes card [1.0.3](https://github.com/hsolgaard/zha-bindings-manager/releases/tag/v1.0.3): a scan where nothing
+responds now says zha-toolkit is the likely cause and shows the actual error, instead of blaming sleepy devices
+([#2](https://github.com/hsolgaard/zha-bindings-manager-integration/issues/2)). Scanning without zha-toolkit stops with
+a clear message, and the scan summary separates battery devices from mains-powered ones. No integration changes.
+
 ## [1.0.2]
 
 ### Fixed
