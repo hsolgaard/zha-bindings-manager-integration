@@ -97,6 +97,7 @@ async def test_capabilities_report_versions_and_features(hass: HomeAssistant, ha
         "sidebar_panel": True,
         "load_card_everywhere": False,
         "removal_notices": True,
+        "raw_device_info": True,
     }
 
 

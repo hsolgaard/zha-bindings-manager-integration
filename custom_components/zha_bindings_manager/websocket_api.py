@@ -1,6 +1,6 @@
 """WebSocket API for the ZHA Bindings Manager integration.
 
-Three commands, deliberately minimal — no patch_state, no
+Four commands, deliberately minimal — no patch_state, no
 subscribe_updates, no list_instances/delete_instance until something
 actually needs them:
 
@@ -14,6 +14,9 @@ actually needs them:
     stored doesn't match what the client last saw, the write is rejected
     with a "stale_write" error instead of silently clobbering a newer
     save. The frontend is expected to reload and retry rather than merge.
+  raw_device_info — the device's own identity, signature and firmware,
+    read over the air rather than from ZHA's (possibly quirked) view. Used
+    when sharing a scan to the capabilities database. See raw_device.py.
 """
 from __future__ import annotations
 
@@ -38,6 +41,7 @@ from .const import (
 )
 from .card_frontend import bundled_card_version
 from .options import current_options
+from .raw_device import DeviceNotFound, async_get_raw_device_info
 
 
 def _now_iso() -> str:
@@ -46,10 +50,11 @@ def _now_iso() -> str:
 
 @callback
 def async_register_websocket_commands(hass: HomeAssistant) -> None:
-    """Register this integration's three websocket commands."""
+    """Register this integration's websocket commands."""
     websocket_api.async_register_command(hass, websocket_get_capabilities)
     websocket_api.async_register_command(hass, websocket_get_state)
     websocket_api.async_register_command(hass, websocket_save_state)
+    websocket_api.async_register_command(hass, websocket_raw_device_info)
 
 
 def _get_store(hass: HomeAssistant) -> storage.Store:
@@ -93,6 +98,9 @@ async def websocket_get_capabilities(
                 "sidebar_panel": opts[OPT_SIDEBAR_PANEL],
                 "load_card_everywhere": opts[OPT_LOAD_EVERYWHERE],
                 "removal_notices": opts[OPT_REMOVAL_NOTICES],
+                # Always on: lets the card read a device's raw identity and
+                # signature instead of ZHA's quirked view (raw_device_info).
+                "raw_device_info": True,
             },
         },
     )
@@ -155,3 +163,27 @@ async def websocket_save_state(
     data[card_id] = {"updated_at": new_updated_at, "state": msg["state"]}
     await store.async_save(data)
     connection.send_result(msg["id"], {"updated_at": new_updated_at})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/raw_device_info",
+        vol.Required("ieee"): str,
+    }
+)
+@websocket_api.async_response
+async def websocket_raw_device_info(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """The device's own identity, endpoints/clusters and firmware, asked of
+    the device itself (see raw_device.py). Each part carries its own status,
+    so a sleepy device that misses one request still returns the rest."""
+    try:
+        result = await async_get_raw_device_info(hass, msg["ieee"])
+    except DeviceNotFound:
+        connection.send_error(msg["id"], "device_not_found", f"No ZHA device with IEEE {msg['ieee']}")
+        return
+    except LookupError as exc:
+        connection.send_error(msg["id"], "zha_not_loaded", str(exc))
+        return
+    connection.send_result(msg["id"], result)

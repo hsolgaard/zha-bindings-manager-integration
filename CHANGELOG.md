@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **`raw_device_info` websocket command.** Reads a device's identity, endpoints and firmware directly from the device:
+  ZDO active endpoints and simple descriptors, a raw read of the Basic cluster (manufacturer, model, app/hw version,
+  date code, sw build id) and the OTA client's current file version. ZHA's quirked view isn't involved. Each part
+  reports its own status, so a sleepy device that misses one request still returns the rest. The card uses it when
+  sharing a scan to the capabilities database. `get_capabilities` reports it as the `raw_device_info` feature.
+
 ## [1.0.3]
 
 Includes card [1.0.3](https://github.com/hsolgaard/zha-bindings-manager/releases/tag/v1.0.3): a scan where nothing
