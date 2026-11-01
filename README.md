@@ -138,7 +138,7 @@ The card also cleans up after removed devices on its own: a full **Scan bindings
 
 Each ZHA device that controls, or is controlled by, another device or a group gets two extra entities on its normal Home Assistant device page (**Settings → Devices & services → ZHA → the device**), under **Diagnostic**:
 
-- **Bindings**: how many devices or groups it controls and is controlled by, for example "Controls 2 · Controlled by 1". Click it and open **Attributes** for the names, for example "Kitchen spots (On/Off, Level Control)" or "Hall dimmer via group Kitchen (On/Off)".
+- **Bindings**: how many devices or groups it controls and is controlled by, for example "Controls 2 · Controlled by 1". Click it and open **Attributes** for the names, for example "Kitchen spots (On/Off, Level Control)" or "Hall dimmer via group Kitchen (On/Off)", and for **Open in ZHA Bindings Manager**, a link to that device in the card. (The link needs Home Assistant's address under Settings → System → Network, and the sidebar page switched on.)
 - **Rescan bindings**: reads the device's binding table again with zha-toolkit and updates the sensor. Battery devices are usually asleep: press a button on the device first.
 
 The sensor uses the card's most recent scan of each device, or a newer rescan from the device page. Devices whose only bindings go to the coordinator (the routine reporting every device has) get nothing, to keep the number of entities down. To switch it off, untick **Show bindings on each device's page** under Configure.

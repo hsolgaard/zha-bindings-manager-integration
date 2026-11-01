@@ -183,3 +183,24 @@ async def test_long_lists_stay_out_of_the_history_database(hass: HomeAssistant, 
     from custom_components.zha_bindings_manager.sensor import BindingsSensor
 
     assert {"controls", "controlled_by"} <= BindingsSensor._unrecorded_attributes
+
+
+async def test_sensor_says_where_it_comes_from_and_links_to_the_card(hass: HomeAssistant, hass_storage):
+    from homeassistant.core_config import async_process_ha_core_config
+
+    await async_process_ha_core_config(hass, {"internal_url": "http://ha.local:8123"})
+    hass_storage[STORAGE_KEY] = _card_state({R: [_b(R, 6, L)]})
+    _zha_devices(hass)
+    await _setup(hass)
+    attrs = hass.states.get("sensor.rodret_bindings").attributes
+    assert attrs["shown_by"] == "ZHA Bindings Manager"
+    assert attrs["open_in_zha_bindings_manager"] == f"http://ha.local:8123/zha-bindings-manager?device={R}"
+
+
+async def test_no_link_without_the_sidebar_page_or_a_known_address(hass: HomeAssistant, hass_storage):
+    hass_storage[STORAGE_KEY] = _card_state({R: [_b(R, 6, L)]})
+    _zha_devices(hass)
+    await _setup(hass, {"sidebar_panel": False})
+    attrs = hass.states.get("sensor.rodret_bindings").attributes
+    assert attrs["shown_by"] == "ZHA Bindings Manager"
+    assert "open_in_zha_bindings_manager" not in attrs

@@ -11,12 +11,18 @@
 - **With "Check bindings every night" on, Rescan bindings also counts as a check.** Two rescans after a binding
   disappears raise the Repairs issue, so you don't have to wait for the nightly run.
 
+- **The Bindings sensor says where it comes from and links to the card.** Its attributes now start with **Shown by:
+  ZHA Bindings Manager** and include **Open in ZHA Bindings Manager**, a link that opens the card's page on that
+  device (card 1.3.1). The link needs Home Assistant's address (Settings → System → Network) and the sidebar page
+  switched on; otherwise it's left out. The "Bindings disappeared" Repairs issue's **Learn more** opens the device
+  in the card too.
+
 ### Fixed
 
 - With "Check bindings every night" on, a device that loses all its bindings keeps its Bindings sensor and Rescan
   button (showing "No bindings"), so it can still be rescanned and repaired. Before, both disappeared.
 
-Includes card 1.3.1, which has no changes.
+Includes card 1.3.1, which can open a device straight from a link (`/zha-bindings-manager?device=<address>`).
 
 ## [1.3.0]
 

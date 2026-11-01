@@ -93,6 +93,7 @@ async def test_issue_after_two_misses_and_silence_when_asleep(setup):
     assert issue.is_fixable and issue.severity == ir.IssueSeverity.WARNING
     assert issue.translation_placeholders["device"] == "Rodret"
     assert "On/Off from endpoint 1 → Spots" in issue.translation_placeholders["bindings"]
+    assert issue.learn_more_url == f"/zha-bindings-manager?device={R}"
 
 
 async def _make_issue(watch, state):

@@ -26,6 +26,11 @@ CARD_URL = f"/{DOMAIN}/{CARD_FILENAME}"
 # Not "zha-bindings": that is the address the card README suggested for the
 # YAML dashboard, and two sidebar entries can't share an address.
 PANEL_URL_PATH = "zha-bindings-manager"
+
+
+def device_link_path(ieee: str) -> str:
+    """The card's page opened on one device (card 1.3.1+)."""
+    return f"/{PANEL_URL_PATH}?device={ieee}"
 PANEL_COMPONENT = "zha-bindings-manager-panel"
 PANEL_TITLE = "ZHA Bindings"
 PANEL_ICON = "mdi:led-strip-variant"
