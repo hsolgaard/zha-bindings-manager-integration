@@ -29,6 +29,7 @@ from homeassistant.helpers import storage
 from .const import (
     BACKEND_VERSION,
     DOMAIN,
+    OPT_DEVICE_PAGE,
     OPT_LOAD_EVERYWHERE,
     OPT_REMOVAL_NOTICES,
     OPT_SHARED_STORAGE,
@@ -93,6 +94,7 @@ async def websocket_get_capabilities(
                 "sidebar_panel": opts[OPT_SIDEBAR_PANEL],
                 "load_card_everywhere": opts[OPT_LOAD_EVERYWHERE],
                 "removal_notices": opts[OPT_REMOVAL_NOTICES],
+                "device_page_bindings": opts[OPT_DEVICE_PAGE],
             },
         },
     )
@@ -155,3 +157,7 @@ async def websocket_save_state(
     data[card_id] = {"updated_at": new_updated_at, "state": msg["state"]}
     await store.async_save(data)
     connection.send_result(msg["id"], {"updated_at": new_updated_at})
+    # A new scan may change what the device-page entities show.
+    device_bindings = hass.data.get(DOMAIN, {}).get("device_bindings")
+    if device_bindings is not None:
+        hass.async_create_task(device_bindings.async_refresh())
