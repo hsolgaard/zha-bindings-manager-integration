@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.4]
+
+Includes card [1.0.4](https://github.com/hsolgaard/zha-bindings-manager/releases/tag/v1.0.4), with fixes from forum
+testing by John_smith. Binding a battery remote that falls asleep before the check now shows "not confirmed yet" with
+a Check again button, instead of "Bind failed". The Bindings table no longer says "No bindings loaded yet" when coordinator
+bindings are hidden. "Check supported commands" shows its progress and stops waiting after 2 minutes. Binding Health
+says "Valid" instead of "OK" and warns about Basic cluster bindings between devices. No integration changes.
+
 ## [1.0.3]
 
 Includes card [1.0.3](https://github.com/hsolgaard/zha-bindings-manager/releases/tag/v1.0.3): a scan where nothing
