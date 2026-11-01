@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0]
+
+Includes card [1.1.0](https://github.com/hsolgaard/zha-bindings-manager/releases/tag/v1.1.0): **Control lights with
+this…**, a guided way to make a remote control several lights. It creates or reuses a ZHA group, binds the remote to
+it, checks each step, asks you to test with the remote's buttons, and offers to share the result with the community
+database so others know how that remote behaves. No integration changes.
+
 ## [1.0.5]
 
 Includes card [1.0.5](https://github.com/hsolgaard/zha-bindings-manager/releases/tag/v1.0.5): when you bind to a group,
