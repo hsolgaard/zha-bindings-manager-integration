@@ -97,6 +97,7 @@ async def test_capabilities_report_versions_and_features(hass: HomeAssistant, ha
         "sidebar_panel": True,
         "load_card_everywhere": False,
         "removal_notices": True,
+        "device_page_bindings": True,
     }
 
 
@@ -105,10 +106,10 @@ async def test_options_flow_shows_and_saves_switches(hass: HomeAssistant):
     result = await hass.config_entries.options.async_init(entry.entry_id)
     assert result["type"] == "form"
     keys = {str(k) for k in result["data_schema"].schema}
-    assert keys == {"sidebar_panel", "load_card_everywhere", "shared_storage", "removal_notices"}
+    assert keys == {"sidebar_panel", "load_card_everywhere", "shared_storage", "removal_notices", "device_page_bindings"}
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
-        {"sidebar_panel": True, "load_card_everywhere": False, "shared_storage": True, "removal_notices": False},
+        {"sidebar_panel": True, "load_card_everywhere": False, "shared_storage": True, "removal_notices": False, "device_page_bindings": True},
     )
     assert result["type"] == "create_entry"
     await hass.async_block_till_done()

@@ -37,11 +37,18 @@ OPT_SIDEBAR_PANEL = "sidebar_panel"
 OPT_LOAD_EVERYWHERE = "load_card_everywhere"
 OPT_SHARED_STORAGE = "shared_storage"
 OPT_REMOVAL_NOTICES = "removal_notices"
+OPT_DEVICE_PAGE = "device_page_bindings"
 DEFAULT_OPTIONS = {
     OPT_SIDEBAR_PANEL: True,
     OPT_LOAD_EVERYWHERE: False,
     OPT_SHARED_STORAGE: True,
     OPT_REMOVAL_NOTICES: True,
+    OPT_DEVICE_PAGE: True,
 }
+
+# Fired when binding data changes (the card saved a scan, or a device-page
+# rescan finished), so the device-page entities update.
+SIGNAL_BINDINGS_UPDATED = f"{DOMAIN}_bindings_updated"
+PLATFORMS = ["sensor", "button"]
 
 ISSUE_CARD_INSTALLED_TWICE = "card_installed_twice"

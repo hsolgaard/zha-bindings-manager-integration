@@ -5,7 +5,9 @@ Configure:
   - a "ZHA Bindings" sidebar page (admins only) running the card,
   - loading the card on every page, for use on your own dashboards,
   - shared storage, so the card's data is the same in every browser,
-  - a notice when a removed ZHA device still has bindings pointing to it.
+  - a notice when a removed ZHA device still has bindings pointing to it,
+  - bindings on each bound ZHA device's own page: a "Bindings" sensor and a
+    "Rescan bindings" button (1.2.0).
 
 Removing this integration doesn't delete anything the card saved in a
 browser; the card falls back to browser storage the next time it loads.
@@ -16,7 +18,8 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
 from homeassistant.core import CoreState, Event, HomeAssistant
 
-from .const import DOMAIN, OLD_TITLE, OPT_REMOVAL_NOTICES, TITLE
+from .const import DOMAIN, OLD_TITLE, OPT_DEVICE_PAGE, OPT_REMOVAL_NOTICES, PLATFORMS, TITLE
+from .device_bindings import DeviceBindings
 from .duplicate_check import async_check_card_installed_twice
 from .card_frontend import async_setup_frontend, async_unload_frontend
 from .options import options_from
@@ -40,6 +43,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     if options[OPT_REMOVAL_NOTICES]:
         entry.async_on_unload(async_setup_removal_watch(hass))
+
+    if options[OPT_DEVICE_PAGE]:
+        device_bindings = DeviceBindings(hass)
+        domain_data["device_bindings"] = device_bindings
+        await device_bindings.async_load()
+        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    else:
+        domain_data.pop("device_bindings", None)
 
     # Lovelace resources are only reliable once Home Assistant has started.
     if hass.state is CoreState.running:
@@ -68,4 +79,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     links to the file once the panel and extra script are removed.
     """
     async_unload_frontend(hass)
+    domain_data = hass.data.get(DOMAIN, {})
+    if domain_data.pop("device_bindings", None) is not None:
+        return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     return True

@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.2.0]
+
+### Added
+
+- **Bindings on each device's own page.** Every ZHA device that controls, or is controlled by, another device or a
+  group now has a **Bindings** sensor and a **Rescan bindings** button on its normal Home Assistant device page
+  (under Diagnostic). The sensor says what the device controls and what controls it, including through groups, for
+  example "Controlled by Hall dimmer via group Kitchen (On/Off)". The button reads the device's binding table again.
+  Devices with only routine coordinator bindings get nothing. The sensor updates whenever the card saves a scan.
+  Switch it off with **Show bindings on each device's page** under Configure. This came out of the community thread
+  "WTH: Is device binding a second-class citizen?".
+
+Includes card 1.2.0, which has no changes.
+
 ## [1.1.0]
 
 Includes card [1.1.0](https://github.com/hsolgaard/zha-bindings-manager/releases/tag/v1.1.0): **Control lights with
