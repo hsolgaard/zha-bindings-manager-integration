@@ -20,14 +20,16 @@
           "load_card_everywhere": "Load the card on every page",
           "shared_storage": "Shared storage",
           "removal_notices": "Notify when a removed device still has bindings pointing to it",
-          "device_page_bindings": "Show bindings on each device's page"
+          "device_page_bindings": "Show bindings on each device's page",
+          "binding_watch": "Check bindings every night and tell me when one disappears"
         },
         "data_description": {
           "sidebar_panel": "Admins only. Runs the card full-page. The card's file loads only when you open this page.",
           "load_card_everywhere": "Only needed to put the card on your own dashboards. The card is about 380 KB, and with this on every page loads it, including on phones and tablets that never open it.",
           "shared_storage": "Saves the card's data in Home Assistant, so it's the same in every browser and on every device. When off, each browser keeps its own copy.",
           "removal_notices": "Shows a Home Assistant notification naming the devices still bound to a device you remove, based on the card's last scan.",
-          "device_page_bindings": "Adds a Bindings sensor and a Rescan bindings button to the page of each ZHA device that controls, or is controlled by, another device or a group. Uses the card's last scan."
+          "device_page_bindings": "Adds a Bindings sensor and a Rescan bindings button to the page of each ZHA device that controls, or is controlled by, another device or a group. Uses the card's last scan.",
+          "binding_watch": "Reads the binding table of every device with bindings at 03:17. Battery devices are checked the next time they're used instead. A binding missing twice in a row shows up in Repairs, with a button to put it back. Nothing is changed automatically. Uses the card's scans as the starting point."
         }
       }
     }
@@ -36,6 +38,35 @@
     "card_installed_twice": {
       "title": "ZHA Bindings Manager card is installed twice",
       "description": "The ZHA Bindings Manager card is also installed from HACS (Lovelace resource `{resource}`). This integration already includes the card, so the two copies compete for the page and the one that runs may be out of date.\n\nRemove **ZHA Bindings Manager** from HACS → Frontend (HACS also removes its Lovelace resource). If you use the card on your own dashboards, first turn on **Load the card on every page** under Settings → Devices & services → ZHA Bindings Manager → Configure.\n\nThis notice disappears after the next restart once the HACS card is gone."
+    },
+    "binding_missing": {
+      "title": "Bindings disappeared from {device}",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Bindings disappeared from {device}",
+            "description": "These bindings were on {device} before, but weren't there in the last two checks:\n\n{bindings}\n\nThis happens when a device is factory reset, re-paired, or loses its binding table after a firmware update. A remote or switch then stops controlling its lights.",
+            "menu_options": {
+              "reapply": "Put them back",
+              "forget": "I removed them on purpose"
+            }
+          },
+          "reapply": {
+            "title": "Put the bindings back",
+            "description": "The integration will bind these again with zha-toolkit and then read {device}'s binding table to check:\n\n{bindings}\n\nIf {device} runs on battery, press a button on it now to wake it, then select Submit straight away."
+          },
+          "forget": {
+            "title": "Stop expecting these bindings",
+            "description": "The integration will stop expecting these on {device}:\n\n{bindings}\n\nNothing is sent to the device."
+          }
+        },
+        "error": {
+          "still_missing": "Some bindings still aren't on the device, or it didn't answer. If it runs on battery, wake it and try again."
+        },
+        "abort": {
+          "not_enabled": "Turn on \"Check bindings every night\" under Configure first."
+        }
+      }
     }
   },
   "entity": {

@@ -30,6 +30,7 @@ from .const import (
     BACKEND_VERSION,
     DOMAIN,
     OPT_DEVICE_PAGE,
+    OPT_WATCH,
     OPT_LOAD_EVERYWHERE,
     OPT_REMOVAL_NOTICES,
     OPT_SHARED_STORAGE,
@@ -95,6 +96,7 @@ async def websocket_get_capabilities(
                 "load_card_everywhere": opts[OPT_LOAD_EVERYWHERE],
                 "removal_notices": opts[OPT_REMOVAL_NOTICES],
                 "device_page_bindings": opts[OPT_DEVICE_PAGE],
+                "binding_watch": opts[OPT_WATCH],
             },
         },
     )

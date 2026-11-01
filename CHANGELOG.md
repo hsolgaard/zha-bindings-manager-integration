@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.3.0]
+
+### Added
+
+- **Find out when a binding disappears, and put it back.** A new option, **Check bindings every night and tell me
+  when one disappears** (off by default), reads the binding table of every device that controls another device or
+  a group at 03:17 each night, and checks battery devices the next time they're used instead. When a binding the
+  card last saw is missing in two checks in a row, an issue appears under Settings → System → Repairs, naming the
+  device and the bindings. From there you can **put them back** (the integration binds them again and checks) or
+  say **you removed them on purpose**. Unbinding in the card is never reported, a device that doesn't answer never
+  counts as a miss, and nothing is re-bound automatically. This came out of the community thread "WTH: Is device
+  binding a second-class citizen?".
+
+### Fixed
+
+- The device-page sensor no longer loses track of the coordinator after a small scan when Home Assistant's ZHA
+  gateway can't be asked directly. Routine coordinator bindings could briefly count as device-to-device ones.
+
+Includes card 1.3.0, which has no changes.
+
 ## [1.2.0]
 
 ### Added

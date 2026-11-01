@@ -88,6 +88,7 @@ class DeviceBindings:
         self.by_source: dict[str, list[dict]] = {}
         self.coordinator: str | None = None
         self.exposed: set[str] = set()
+        self.card: dict[str, tuple[str, list[dict]]] = {}
 
     async def async_load(self) -> None:
         data = await self._scans_store.async_load()
@@ -98,8 +99,10 @@ class DeviceBindings:
         from .websocket_api import _load  # local import: avoids a cycle
 
         card = card_bindings(await _load(self.hass))
+        self.card = card
         self.by_source = merge_sources(card, self.scans)
-        self.coordinator = self._gateway_coordinator() or guess_coordinator(self.by_source)
+        # Keep the last known coordinator if this data set is too small to guess from.
+        self.coordinator = self._gateway_coordinator() or guess_coordinator(self.by_source) or self.coordinator
         exposed = devices_with_bindings(self.by_source, self.coordinator)
         # Only devices ZHA actually has, so no orphan devices get created.
         self.exposed = {i for i in exposed if self.zha_device(i) is not None}

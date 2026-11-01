@@ -1,6 +1,6 @@
 """Config and options flow for ZHA Bindings Manager.
 
-Adding the integration asks nothing. Configure (the options flow) has five
+Adding the integration asks nothing. Configure (the options flow) has six
 switches; see const.DEFAULT_OPTIONS for the defaults. Single instance only:
 there's one shared store and one sidebar page per Home Assistant.
 """
@@ -16,6 +16,7 @@ from homeassistant.core import callback
 from .const import (
     DOMAIN,
     OPT_DEVICE_PAGE,
+    OPT_WATCH,
     OPT_LOAD_EVERYWHERE,
     OPT_REMOVAL_NOTICES,
     OPT_SHARED_STORAGE,
@@ -63,6 +64,7 @@ class ZhaBindingsManagerOptionsFlow(config_entries.OptionsFlow):
                 vol.Required(OPT_SHARED_STORAGE, default=current[OPT_SHARED_STORAGE]): bool,
                 vol.Required(OPT_REMOVAL_NOTICES, default=current[OPT_REMOVAL_NOTICES]): bool,
                 vol.Required(OPT_DEVICE_PAGE, default=current[OPT_DEVICE_PAGE]): bool,
+                vol.Required(OPT_WATCH, default=current[OPT_WATCH]): bool,
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema)
