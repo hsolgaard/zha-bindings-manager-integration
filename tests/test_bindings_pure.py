@@ -72,9 +72,11 @@ def test_summary_both_directions_groups_and_coordinator_left_out():
     assert summarize(L, data, C, names, {3: "Lounge"}, {3: {P}})["controlled_by"] == ["Rodret (On/Off, Level Control)"]
     lamp = summarize(P, data, C, names, {3: "Lounge"}, {3: {P}})
     assert lamp["controlled_by"] == ["Rodret via group Lounge (On/Off)"]
-    assert summary_text(lamp) == "Controlled by Rodret via group Lounge (On/Off)"
+    assert summary_text(lamp) == "Controlled by 1"
+    assert summary_text(s) == "Controls 2"
+    assert summary_text({"controls": [], "controlled_by": []}) == "No bindings"
 
 
-def test_summary_text_is_capped_for_the_sensor_state():
-    s = {"controls": [f"Light {i} (On/Off, Level Control)" for i in range(30)], "controlled_by": []}
-    assert len(summary_text(s)) == 255
+def test_summary_text_counts_both_directions():
+    s = {"controls": ["A (On/Off)", "B (On/Off)"], "controlled_by": ["C (On/Off)"]}
+    assert summary_text(s) == "Controls 2 · Controlled by 1"

@@ -72,7 +72,27 @@
   "entity": {
     "sensor": {
       "bindings": {
-        "name": "Bindings"
+        "name": "Bindings",
+        "state_attributes": {
+          "shown_by": {
+            "name": "Shown by"
+          },
+          "controls": {
+            "name": "Controls"
+          },
+          "controlled_by": {
+            "name": "Controlled by"
+          },
+          "binding_count": {
+            "name": "Bindings"
+          },
+          "last_rescanned": {
+            "name": "Last rescanned"
+          },
+          "open_in_zha_bindings_manager": {
+            "name": "Open in ZHA Bindings Manager"
+          }
+        }
       }
     },
     "button": {

@@ -31,7 +31,8 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.event import async_track_time_change
 
 from .bindings import BindsGetFailed, describe_binding, evaluate_check, norm_ieee, relationship_map
-from .const import DOMAIN, SIGNAL_BINDINGS_UPDATED
+from .const import DOMAIN, OPT_SIDEBAR_PANEL, SIGNAL_BINDINGS_UPDATED, device_link_path
+from .options import current_options
 from .device_bindings import DeviceBindings
 
 _LOGGER = logging.getLogger(__name__)
@@ -63,7 +64,9 @@ class BindingWatch:
     async def async_load(self) -> None:
         stored = await self._store.async_load()
         self.tracked = stored if isinstance(stored, dict) else {}
+        self.data.extra_exposed = lambda: {i for i, w in self.tracked.items() if w.get("expected")}
         self.sync_from_card()
+        await self.data.async_refresh()
 
     def _save(self) -> None:
         self._store.async_delay_save(lambda: self.tracked, 1)
@@ -182,6 +185,9 @@ class BindingWatch:
             is_persistent=True,
             severity=ir.IssueSeverity.WARNING,
             translation_key="binding_missing",
+            # "Learn more" opens the device in the card. A normal link, so a
+            # relative path works here.
+            learn_more_url=device_link_path(ieee) if current_options(self.hass)[OPT_SIDEBAR_PANEL] else None,
             translation_placeholders={"device": name, "bindings": self.describe(missing)},
             data={"ieee": ieee},
         )

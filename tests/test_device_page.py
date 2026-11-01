@@ -74,9 +74,10 @@ async def test_entities_only_on_bound_devices_and_attached_to_the_zha_device(has
     assert _entities_for(hass, P) == []  # coordinator-only bindings: nothing added
     assert len(dr.async_entries_for_config_entry(reg, hass.config_entries.async_entries(DOMAIN)[0].entry_id)) == 0  # no devices of its own
     st = hass.states.get("sensor.rodret_bindings")
-    assert st.state == "Controls Spots (On/Off, Level Control)"
+    assert st.state == "Controls 1"
     assert st.attributes["controls"] == ["Spots (On/Off, Level Control)"]
-    assert hass.states.get("sensor.spots_bindings").state == "Controlled by Rodret (On/Off, Level Control)"
+    assert hass.states.get("sensor.spots_bindings").state == "Controlled by 1"
+    assert hass.states.get("sensor.spots_bindings").attributes["controlled_by"] == ["Rodret (On/Off, Level Control)"]
 
 
 async def test_option_off_adds_nothing(hass: HomeAssistant, hass_storage):
@@ -96,15 +97,15 @@ async def test_rescan_button_updates_and_entities_follow_the_data(hass: HomeAssi
 
     hass.services.async_register("zha_toolkit", "binds_get", binds_get, supports_response=SupportsResponse.ONLY)
     await _setup(hass)
-    assert hass.states.get("sensor.rodret_bindings").state == "Controls Spots (On/Off)"
+    assert hass.states.get("sensor.rodret_bindings").attributes["controls"] == ["Spots (On/Off)"]
 
     # Rescan: the Rodret now controls the plug instead of the light.
     await hass.services.async_call("button", "press", {"entity_id": "button.rodret_rescan_bindings"}, blocking=True)
     await hass.async_block_till_done()
     st = hass.states.get("sensor.rodret_bindings")
-    assert st.state == "Controls Plug (On/Off)"
+    assert st.attributes["controls"] == ["Plug (On/Off)"]
     assert st.attributes["last_rescanned"]
-    assert hass.states.get("sensor.plug_bindings").state == "Controlled by Rodret (On/Off)"
+    assert hass.states.get("sensor.plug_bindings").attributes["controlled_by"] == ["Rodret (On/Off)"]
     # The light is no longer bound to anything: its entities go away.
     assert _entities_for(hass, L) == []
     assert hass.states.get("sensor.spots_bindings") is None
@@ -113,7 +114,7 @@ async def test_rescan_button_updates_and_entities_follow_the_data(hass: HomeAssi
     replies["value"] = {"success": False, "errors": ["Timeout"]}
     with pytest.raises(HomeAssistantError, match="Battery devices are usually asleep"):
         await hass.services.async_call("button", "press", {"entity_id": "button.rodret_rescan_bindings"}, blocking=True)
-    assert hass.states.get("sensor.rodret_bindings").state == "Controls Plug (On/Off)"
+    assert hass.states.get("sensor.rodret_bindings").attributes["controls"] == ["Plug (On/Off)"]
 
 
 async def test_card_save_refreshes_the_device_page(hass: HomeAssistant, hass_storage, hass_ws_client):
@@ -126,7 +127,7 @@ async def test_card_save_refreshes_the_device_page(hass: HomeAssistant, hass_sto
                             "base_updated_at": "2026-11-01T10:00:00+00:00"})
     assert (await client.receive_json())["success"]
     await hass.async_block_till_done()
-    assert hass.states.get("sensor.rodret_bindings").state == "Controls Spots (Level Control)"
+    assert hass.states.get("sensor.rodret_bindings").attributes["controls"] == ["Spots (Level Control)"]
 
 
 async def test_unload_removes_platforms(hass: HomeAssistant, hass_storage):
@@ -151,7 +152,7 @@ async def test_card_save_does_not_override_a_newer_device_page_rescan(hass: Home
     await _setup(hass)
     await hass.services.async_call("button", "press", {"entity_id": "button.rodret_rescan_bindings"}, blocking=True)
     await hass.async_block_till_done()
-    assert hass.states.get("sensor.rodret_bindings").state == "Controls Plug (On/Off)"
+    assert hass.states.get("sensor.rodret_bindings").attributes["controls"] == ["Plug (On/Off)"]
     # The card saves later (it scanned some other device); its copy of the
     # Rodret was read before the rescan, so the rescan still wins.
     client = await hass_ws_client(hass)
@@ -161,7 +162,7 @@ async def test_card_save_does_not_override_a_newer_device_page_rescan(hass: Home
                             "base_updated_at": "2026-11-01T10:00:00+00:00"})
     assert (await client.receive_json())["success"]
     await hass.async_block_till_done()
-    assert hass.states.get("sensor.rodret_bindings").state == "Controls Plug (On/Off)"
+    assert hass.states.get("sensor.rodret_bindings").attributes["controls"] == ["Plug (On/Off)"]
 
 
 async def test_removes_linked_devices_left_by_120(hass: HomeAssistant, hass_storage):
@@ -176,3 +177,30 @@ async def test_removes_linked_devices_left_by_120(hass: HomeAssistant, hass_stor
     await hass.async_block_till_done()
     assert reg.async_get(stray.id) is None or entry.entry_id not in reg.async_get(stray.id).config_entries
     assert _entities_for(hass, R) == ["button.rodret_rescan_bindings", "sensor.rodret_bindings"]
+
+
+async def test_long_lists_stay_out_of_the_history_database(hass: HomeAssistant, hass_storage):
+    from custom_components.zha_bindings_manager.sensor import BindingsSensor
+
+    assert {"controls", "controlled_by"} <= BindingsSensor._unrecorded_attributes
+
+
+async def test_sensor_says_where_it_comes_from_and_links_to_the_card(hass: HomeAssistant, hass_storage):
+    from homeassistant.core_config import async_process_ha_core_config
+
+    await async_process_ha_core_config(hass, {"internal_url": "http://ha.local:8123"})
+    hass_storage[STORAGE_KEY] = _card_state({R: [_b(R, 6, L)]})
+    _zha_devices(hass)
+    await _setup(hass)
+    attrs = hass.states.get("sensor.rodret_bindings").attributes
+    assert attrs["shown_by"] == "ZHA Bindings Manager"
+    assert attrs["open_in_zha_bindings_manager"] == f"http://ha.local:8123/zha-bindings-manager?device={R}"
+
+
+async def test_no_link_without_the_sidebar_page_or_a_known_address(hass: HomeAssistant, hass_storage):
+    hass_storage[STORAGE_KEY] = _card_state({R: [_b(R, 6, L)]})
+    _zha_devices(hass)
+    await _setup(hass, {"sidebar_panel": False})
+    attrs = hass.states.get("sensor.rodret_bindings").attributes
+    assert attrs["shown_by"] == "ZHA Bindings Manager"
+    assert "open_in_zha_bindings_manager" not in attrs

@@ -10,6 +10,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .bindings import BindsGetFailed
 from .device_bindings import get_device_bindings
+from .watch import get_watch
 from .entity_manager import async_manage_entities
 
 
@@ -31,6 +32,16 @@ class RescanBindingsButton(ButtonEntity):
         data = get_device_bindings(self.hass)
         if data is None:
             raise HomeAssistantError("ZHA Bindings Manager isn't ready yet.")
+        # With "Check bindings every night" on, a manual rescan also counts as a
+        # check, so a disappeared binding can be confirmed (and the Repairs
+        # flow tested) without waiting for the nightly run.
+        watch = get_watch(self.hass)
+        if watch is not None and (watch.tracked.get(self._ieee) or {}).get("expected"):
+            if await watch.async_check_device(self._ieee) is None:
+                raise HomeAssistantError(
+                    "The device didn't answer. Battery devices are usually asleep: press a button on it, then try again."
+                )
+            return
         try:
             await data.async_rescan(self._ieee)
         except BindsGetFailed as err:

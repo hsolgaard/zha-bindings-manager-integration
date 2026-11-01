@@ -138,7 +138,7 @@ The card also cleans up after removed devices on its own: a full **Scan bindings
 
 Each ZHA device that controls, or is controlled by, another device or a group gets two extra entities on its normal Home Assistant device page (**Settings → Devices & services → ZHA → the device**), under **Diagnostic**:
 
-- **Bindings**: what the device controls and what controls it, for example "Controls Kitchen spots (On/Off, Level Control)" or "Controlled by Hall dimmer via group Kitchen (On/Off)". The lists are also in the sensor's attributes.
+- **Bindings**: how many devices or groups it controls and is controlled by, for example "Controls 2 · Controlled by 1". Click it and open **Attributes** for the names, for example "Kitchen spots (On/Off, Level Control)" or "Hall dimmer via group Kitchen (On/Off)", and for **Open in ZHA Bindings Manager**, a link to that device in the card. (The link needs Home Assistant's address under Settings → System → Network, and the sidebar page switched on.)
 - **Rescan bindings**: reads the device's binding table again with zha-toolkit and updates the sensor. Battery devices are usually asleep: press a button on the device first.
 
 The sensor uses the card's most recent scan of each device, or a newer rescan from the device page. Devices whose only bindings go to the coordinator (the routine reporting every device has) get nothing, to keep the number of entities down. To switch it off, untick **Show bindings on each device's page** under Configure.
@@ -150,6 +150,7 @@ Bindings can vanish without anyone noticing: a device is factory reset or re-pai
 - **What it expects:** the bindings the card last saw on each device. Unbinding something in the card is never reported, because the card's next scan updates what's expected.
 - **When it checks:** at 03:17 every night it reads the binding table of each device that controls another device or a group. Battery devices are usually asleep then, so they're checked the next time they're used (a button press) instead, at most once every 20 hours.
 - **When it tells you:** only when a binding is missing in **two checks in a row**. A device that doesn't answer never counts. The issue appears under **Settings → System → Repairs**, naming the device and the missing bindings.
+- **Checking straight away:** pressing **Rescan bindings** on a device's page counts as a check too, so two rescans after a binding goes missing raise the issue without waiting for the night.
 - **What you can do:** **Put them back** binds them again with zha-toolkit and reads the device to check (wake a battery device first), or **I removed them on purpose** stops expecting them.
 
 Nothing is ever re-bound automatically. The checks use zha-toolkit, the same as the card.

@@ -93,6 +93,7 @@ async def test_issue_after_two_misses_and_silence_when_asleep(setup):
     assert issue.is_fixable and issue.severity == ir.IssueSeverity.WARNING
     assert issue.translation_placeholders["device"] == "Rodret"
     assert "On/Off from endpoint 1 → Spots" in issue.translation_placeholders["bindings"]
+    assert issue.learn_more_url == f"/zha-bindings-manager?device={R}"
 
 
 async def _make_issue(watch, state):
@@ -181,3 +182,19 @@ async def test_nightly_check_at_0317(setup):
     async_fire_time_changed(hass, target)
     await hass.async_block_till_done()
     assert watch.tracked[R]["last_check"] is not None
+
+
+async def test_rescan_button_counts_as_a_check(setup):
+    """With the watch on, two Rescan presses after a binding disappears raise
+    the Repairs issue, so it can be tested without waiting for the night."""
+    hass, watch, state = setup
+    state["table"] = _table((0x20, C))
+    for _ in range(2):
+        await hass.services.async_call("button", "press", {"entity_id": "button.rodret_rescan_bindings"}, blocking=True)
+        await hass.async_block_till_done()
+    assert _issue(hass) is not None
+    # It lost its only binding, but its entities stay while it's watched.
+    assert hass.states.get("sensor.rodret_bindings").state == "No bindings"
+    state["answer"] = False
+    with pytest.raises(Exception, match="usually asleep"):
+        await hass.services.async_call("button", "press", {"entity_id": "button.rodret_rescan_bindings"}, blocking=True)
