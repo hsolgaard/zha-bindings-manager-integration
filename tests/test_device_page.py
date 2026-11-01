@@ -131,3 +131,29 @@ async def test_unload_removes_platforms(hass: HomeAssistant, hass_storage):
     assert await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done()
     assert hass.states.get("sensor.rodret_bindings").state == "unavailable"
+
+
+async def test_card_save_does_not_override_a_newer_device_page_rescan(hass: HomeAssistant, hass_storage, hass_ws_client):
+    """The card stamps its whole scan data on every save; what counts per
+    device is when the card last read that device (history.lastSuccessAt)."""
+    hass_storage[STORAGE_KEY] = _card_state({R: [_b(R, 6, L)]})
+    _zha_devices(hass)
+
+    async def binds_get(call):
+        return {"success": True, "result": {"0": {"src_ep": 1, "cluster_id": "0x0006", "dst": {"addrmode": 3, "dst_ieee": P, "dst_ep": 1}}}}
+
+    hass.services.async_register("zha_toolkit", "binds_get", binds_get, supports_response=SupportsResponse.ONLY)
+    await _setup(hass)
+    await hass.services.async_call("button", "press", {"entity_id": "button.rodret_rescan_bindings"}, blocking=True)
+    await hass.async_block_till_done()
+    assert hass.states.get("sensor.rodret_bindings").state == "Controls Plug (On/Off)"
+    # The card saves later (it scanned some other device); its copy of the
+    # Rodret was read before the rescan, so the rescan still wins.
+    client = await hass_ws_client(hass)
+    await client.send_json({"id": 1, "type": f"{DOMAIN}/save_state", "card_id": "zha-bindings-manager",
+                            "state": {"scanState": {"last_complete": {"savedAt": "2099-01-01T00:00:00+00:00", "bindings": {R: [_b(R, 6, L)]}}},
+                                      "history": {R: {"lastSuccessAt": "2026-11-01T10:00:00+00:00"}}},
+                            "base_updated_at": "2026-11-01T10:00:00+00:00"})
+    assert (await client.receive_json())["success"]
+    await hass.async_block_till_done()
+    assert hass.states.get("sensor.rodret_bindings").state == "Controls Plug (On/Off)"

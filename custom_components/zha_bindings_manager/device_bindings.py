@@ -44,8 +44,13 @@ def _now_iso() -> str:
 
 
 def card_bindings(store_data: dict[str, Any]) -> dict[str, tuple[str, list[dict]]]:
-    """{source_ieee: (saved_at, bindings)} from every card instance's saved
-    scan data; the newest instance wins for each device."""
+    """{source_ieee: (read_at, bindings)} from every card instance's saved
+    scan data; the most recently read copy wins for each device.
+
+    read_at is when the card last read that device successfully (its
+    per-device history, lastSuccessAt), not when it last saved: the card
+    saves its whole scan data on every scan, so the save time would make an
+    old copy of one device look newer than a device-page rescan."""
     out: dict[str, tuple[str, list[dict]]] = {}
     for entry in (store_data or {}).values():
         if not isinstance(entry, dict):
@@ -53,10 +58,13 @@ def card_bindings(store_data: dict[str, Any]) -> dict[str, tuple[str, list[dict]
         state = entry.get("state") or {}
         last = ((state.get("scanState") or {}).get("last_complete")) or {}
         saved_at = last.get("savedAt") or entry.get("updated_at") or ""
+        history = state.get("history") or {}
         for ieee, lst in (last.get("bindings") or {}).items():
             key = norm_ieee(ieee)
-            if key not in out or saved_at > out[key][0]:
-                out[key] = (saved_at, lst if isinstance(lst, list) else [])
+            h = history.get(key) or history.get(ieee) or {}
+            read_at = h.get("lastSuccessAt") or saved_at
+            if key not in out or read_at > out[key][0]:
+                out[key] = (read_at, lst if isinstance(lst, list) else [])
     return out
 
 
