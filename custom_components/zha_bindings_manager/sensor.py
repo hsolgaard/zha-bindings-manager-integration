@@ -6,8 +6,6 @@ from typing import Any
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -32,7 +30,6 @@ class BindingsSensor(SensorEntity):
     def __init__(self, ieee: str) -> None:
         self._ieee = ieee
         self._attr_unique_id = f"{ieee}_bindings"
-        self._attr_device_info = DeviceInfo(connections={(dr.CONNECTION_ZIGBEE, ieee)})
         self._summary: dict[str, Any] = {"count": 0, "controls": [], "controlled_by": []}
 
     async def async_added_to_hass(self) -> None:

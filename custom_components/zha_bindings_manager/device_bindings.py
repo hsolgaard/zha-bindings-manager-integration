@@ -111,10 +111,23 @@ class DeviceBindings:
     # --- ZHA lookups -------------------------------------------------------
 
     def zha_device(self, ieee: str) -> dr.DeviceEntry | None:
+        """The device ZHA itself created for this address.
+
+        From Home Assistant 2026.10, identifiers and connections are no longer
+        unique across integrations, so look the device up within ZHA's own
+        config entries rather than registry-wide."""
         registry = dr.async_get(self.hass)
-        return registry.async_get_device(identifiers={(ZHA_DOMAIN, norm_ieee(ieee))}) or registry.async_get_device(
-            connections={(dr.CONNECTION_ZIGBEE, norm_ieee(ieee))}
-        )
+        ident = (ZHA_DOMAIN, norm_ieee(ieee))
+        for entry in self.hass.config_entries.async_entries(ZHA_DOMAIN):
+            if hasattr(registry, "async_get_device_by_identifier"):
+                device = registry.async_get_device_by_identifier(ident, entry.entry_id)
+                if device is not None:
+                    return device
+            else:  # Home Assistant before 2026.10
+                for device in dr.async_entries_for_config_entry(registry, entry.entry_id):
+                    if ident in device.identifiers:
+                        return device
+        return None
 
     def names(self) -> dict[str, str]:
         registry = dr.async_get(self.hass)

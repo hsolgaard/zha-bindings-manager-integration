@@ -15,6 +15,10 @@
 
 ### Fixed
 
+- **Bindings and Rescan bindings now appear on the ZHA device itself.** On Home Assistant 2026.10 and later, 1.2.0
+  put them on a separate "ZHA Bindings Manager" device shown under the ZHA device's **Linked devices**, because Home
+  Assistant no longer merges devices from different integrations. They're now attached to ZHA's own device, and the
+  extra devices 1.2.0 created are removed automatically.
 - The device-page sensor no longer loses track of the coordinator after a small scan when Home Assistant's ZHA
   gateway can't be asked directly. Routine coordinator bindings could briefly count as device-to-device ones.
 
