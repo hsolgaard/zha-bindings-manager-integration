@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.5]
+
+Includes card [1.0.5](https://github.com/hsolgaard/zha-bindings-manager/releases/tag/v1.0.5): when you bind to a group,
+the card now says how many devices in the group support the selected cluster and names the ones that don't, and
+Binding Health warns about group bindings that nothing in the group can act on, or that point at an empty group. No
+integration changes.
+
 ## [1.0.4]
 
 Includes card [1.0.4](https://github.com/hsolgaard/zha-bindings-manager/releases/tag/v1.0.4), with fixes from forum
