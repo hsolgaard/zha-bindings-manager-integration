@@ -7,7 +7,9 @@ Configure:
   - shared storage, so the card's data is the same in every browser,
   - a notice when a removed ZHA device still has bindings pointing to it,
   - bindings on each bound ZHA device's own page: a "Bindings" sensor and a
-    "Rescan bindings" button (1.2.0).
+    "Rescan bindings" button (1.2.0),
+  - a nightly check that raises a Repairs issue when a binding disappears,
+    with Re-apply (1.3.0, off by default).
 
 Removing this integration doesn't delete anything the card saved in a
 browser; the card falls back to browser storage the next time it loads.
@@ -18,7 +20,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
 from homeassistant.core import CoreState, Event, HomeAssistant
 
-from .const import DOMAIN, OLD_TITLE, OPT_DEVICE_PAGE, OPT_REMOVAL_NOTICES, PLATFORMS, TITLE
+from .const import DOMAIN, OLD_TITLE, OPT_DEVICE_PAGE, OPT_REMOVAL_NOTICES, OPT_WATCH, PLATFORMS, TITLE
 from .device_bindings import DeviceBindings
 from .duplicate_check import async_check_card_installed_twice
 from .card_frontend import async_setup_frontend, async_unload_frontend
@@ -44,13 +46,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if options[OPT_REMOVAL_NOTICES]:
         entry.async_on_unload(async_setup_removal_watch(hass))
 
-    if options[OPT_DEVICE_PAGE]:
+    domain_data.pop("device_bindings", None)
+    domain_data.pop("watch", None)
+    domain_data["platforms_loaded"] = False
+    if options[OPT_DEVICE_PAGE] or options[OPT_WATCH]:
         device_bindings = DeviceBindings(hass)
         domain_data["device_bindings"] = device_bindings
         await device_bindings.async_load()
-        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    else:
-        domain_data.pop("device_bindings", None)
+        if options[OPT_WATCH]:
+            from .watch import BindingWatch
+
+            watch = BindingWatch(hass, device_bindings)
+            await watch.async_load()
+            domain_data["watch"] = watch
+            entry.async_on_unload(watch.async_start())
+        if options[OPT_DEVICE_PAGE]:
+            await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+            domain_data["platforms_loaded"] = True
 
     # Lovelace resources are only reliable once Home Assistant has started.
     if hass.state is CoreState.running:
@@ -80,6 +92,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """
     async_unload_frontend(hass)
     domain_data = hass.data.get(DOMAIN, {})
-    if domain_data.pop("device_bindings", None) is not None:
+    domain_data.pop("device_bindings", None)
+    domain_data.pop("watch", None)
+    if domain_data.pop("platforms_loaded", False):
         return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     return True

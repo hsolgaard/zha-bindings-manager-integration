@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from typing import Callable
 
+from homeassistant.helpers import device_registry as dr
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
@@ -33,7 +35,19 @@ def async_manage_entities(
         wanted = set(data.exposed)
         new = wanted - current
         if new:
-            async_add_entities([factory(ieee) for ieee in sorted(new)])
+            entities = []
+            for ieee in sorted(new):
+                device = data.zha_device(ieee)
+                if device is None:
+                    continue
+                entity = factory(ieee)
+                # Attach to ZHA's own device. Describing the device (device_info)
+                # makes Home Assistant 2026.10+ create a separate "linked"
+                # device owned by this integration instead.
+                entity.device_entry = device
+                entities.append(entity)
+            if entities:
+                async_add_entities(entities)
             current.update(new)
         gone = current - wanted
         if gone:
@@ -45,4 +59,17 @@ def async_manage_entities(
             current.difference_update(gone)
 
     entry.async_on_unload(async_dispatcher_connect(hass, SIGNAL_BINDINGS_UPDATED, sync))
+    _remove_linked_devices(hass, entry)
     sync()
+
+
+@callback
+def _remove_linked_devices(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """1.2.0 described ZHA's device instead of attaching to it, which on
+    Home Assistant 2026.10+ created a separate "ZHA Bindings Manager" device
+    linked to each ZHA device. This integration owns no devices of its own,
+    so drop it from any device that still lists it (Home Assistant deletes a
+    device once no integration lists it)."""
+    registry = dr.async_get(hass)
+    for device in dr.async_entries_for_config_entry(registry, entry.entry_id):
+        registry.async_update_device(device.id, remove_config_entry_id=entry.entry_id)

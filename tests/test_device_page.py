@@ -54,8 +54,14 @@ async def _setup(hass, options=None):
     return entry
 
 
+def _zha_device(hass, ieee):
+    reg = dr.async_get(hass)
+    zha = hass.config_entries.async_entries("zha")[0]
+    return next(d for d in dr.async_entries_for_config_entry(reg, zha.entry_id) if ("zha", ieee) in d.identifiers)
+
+
 def _entities_for(hass, ieee):
-    dev = dr.async_get(hass).async_get_device(identifiers={("zha", ieee)})
+    dev = _zha_device(hass, ieee)
     return sorted(e.entity_id for e in er.async_entries_for_device(er.async_get(hass), dev.id))
 
 
@@ -63,11 +69,10 @@ async def test_entities_only_on_bound_devices_and_attached_to_the_zha_device(has
     hass_storage[STORAGE_KEY] = _card_state({R: [_b(R, 0x20, C), _b(R, 6, L), _b(R, 8, L)], L: [_b(L, 6, C)], P: [_b(P, 6, C)]})
     reg = _zha_devices(hass)
     await _setup(hass)
-    devices_before = len(reg.devices)
     assert _entities_for(hass, R) == ["button.rodret_rescan_bindings", "sensor.rodret_bindings"]
     assert _entities_for(hass, L) == ["button.spots_rescan_bindings", "sensor.spots_bindings"]
     assert _entities_for(hass, P) == []  # coordinator-only bindings: nothing added
-    assert len(reg.devices) == devices_before  # no new devices created
+    assert len(dr.async_entries_for_config_entry(reg, hass.config_entries.async_entries(DOMAIN)[0].entry_id)) == 0  # no devices of its own
     st = hass.states.get("sensor.rodret_bindings")
     assert st.state == "Controls Spots (On/Off, Level Control)"
     assert st.attributes["controls"] == ["Spots (On/Off, Level Control)"]
@@ -157,3 +162,17 @@ async def test_card_save_does_not_override_a_newer_device_page_rescan(hass: Home
     assert (await client.receive_json())["success"]
     await hass.async_block_till_done()
     assert hass.states.get("sensor.rodret_bindings").state == "Controls Plug (On/Off)"
+
+
+async def test_removes_linked_devices_left_by_120(hass: HomeAssistant, hass_storage):
+    """1.2.0 created a separate device per ZHA device on HA 2026.10+; setup
+    drops them and the entities sit on ZHA's own device."""
+    hass_storage[STORAGE_KEY] = _card_state({R: [_b(R, 6, L)]})
+    reg = _zha_devices(hass)
+    entry = MockConfigEntry(domain=DOMAIN, title=TITLE)
+    entry.add_to_hass(hass)
+    stray = reg.async_get_or_create(config_entry_id=entry.entry_id, connections={(dr.CONNECTION_ZIGBEE, R)})
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert reg.async_get(stray.id) is None or entry.entry_id not in reg.async_get(stray.id).config_entries
+    assert _entities_for(hass, R) == ["button.rodret_rescan_bindings", "sensor.rodret_bindings"]

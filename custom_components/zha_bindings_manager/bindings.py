@@ -170,7 +170,7 @@ def guess_coordinator(bindings_by_source: dict[str, list[dict]]) -> str | None:
     return best if counts[best] * 2 > len(bindings_by_source) else None
 
 
-def _is_relationship(b: dict, coordinator: str | None) -> bool:
+def is_relationship(b: dict, coordinator: str | None) -> bool:
     """A binding worth showing on a device page: to a group, or to another
     device that isn't the coordinator (those are routine reporting)."""
     if b.get("isGroup"):
@@ -184,7 +184,7 @@ def devices_with_bindings(bindings_by_source: dict[str, list[dict]], coordinator
     out: set[str] = set()
     for source, lst in bindings_by_source.items():
         for b in lst or []:
-            if not _is_relationship(b, coordinator):
+            if not is_relationship(b, coordinator):
                 continue
             out.add(norm_ieee(source))
             if not b.get("isGroup"):
@@ -223,7 +223,7 @@ def summarize(
     count = 0
     for source, lst in bindings_by_source.items():
         for b in lst or []:
-            if not _is_relationship(b, coordinator):
+            if not is_relationship(b, coordinator):
                 continue
             src = norm_ieee(source)
             if b.get("isGroup"):
@@ -254,3 +254,36 @@ def summary_text(summary: dict[str, Any]) -> str:
         parts.append("Controlled by " + "; ".join(summary["controlled_by"]))
     text = ". ".join(parts) or "No bindings"
     return text if len(text) <= 255 else text[:252] + "..."
+
+
+# --- 1.3.0: noticing bindings that disappear --------------------------------
+
+MISSES_FOR_ISSUE = 2
+
+
+def relationship_map(bindings: list[dict] | None, coordinator: str | None) -> dict[str, dict]:
+    """{identity_key: binding} for the bindings worth watching."""
+    return {identity_key(b): b for b in bindings or [] if is_relationship(b, coordinator)}
+
+
+def evaluate_check(expected: dict[str, dict], misses: dict[str, int], present: dict[str, dict]) -> tuple[dict, dict, list[dict]]:
+    """One successful read of a device's binding table.
+
+    expected: bindings it should have; misses: consecutive checks each one
+    was absent; present: what the device has now. Returns (expected, misses,
+    missing) where missing lists bindings absent MISSES_FOR_ISSUE checks in
+    a row. A binding that's present resets its count; new bindings join
+    expected (the user added them)."""
+    new_misses = {k: misses.get(k, 0) + 1 for k in expected if k not in present}
+    merged = {**expected, **present}
+    missing = [merged[k] for k, n in sorted(new_misses.items()) if n >= MISSES_FOR_ISSUE]
+    return merged, new_misses, missing
+
+
+def describe_binding(b: dict, names: dict[str, str], group_names: dict[int, str]) -> str:
+    if b.get("isGroup"):
+        target = f"group {group_names.get(b.get('groupId'), b.get('groupId'))}"
+    else:
+        t = norm_ieee(b.get("targetIeee"))
+        target = names.get(t) or t
+    return f"{cluster_name(b.get('clusterId'))} from endpoint {b.get('sourceEndpoint')} → {target}"
