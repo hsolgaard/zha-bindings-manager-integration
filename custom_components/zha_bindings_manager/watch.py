@@ -63,7 +63,9 @@ class BindingWatch:
     async def async_load(self) -> None:
         stored = await self._store.async_load()
         self.tracked = stored if isinstance(stored, dict) else {}
+        self.data.extra_exposed = lambda: {i for i, w in self.tracked.items() if w.get("expected")}
         self.sync_from_card()
+        await self.data.async_refresh()
 
     def _save(self) -> None:
         self._store.async_delay_save(lambda: self.tracked, 1)

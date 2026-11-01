@@ -246,14 +246,16 @@ def summarize(
 
 
 def summary_text(summary: dict[str, Any]) -> str:
-    """Short sensor state (max 255 chars)."""
+    """Short sensor state: how many devices or groups this one controls and
+    is controlled by, e.g. "Controls 2 · Controlled by 1". The names are in
+    the sensor's attributes. (1.2.0 put the full lists in the state, which
+    was cut off on the device page and made a meaningless history graph.)"""
     parts = []
     if summary["controls"]:
-        parts.append("Controls " + "; ".join(summary["controls"]))
+        parts.append(f"Controls {len(summary['controls'])}")
     if summary["controlled_by"]:
-        parts.append("Controlled by " + "; ".join(summary["controlled_by"]))
-    text = ". ".join(parts) or "No bindings"
-    return text if len(text) <= 255 else text[:252] + "..."
+        parts.append(f"Controlled by {len(summary['controlled_by'])}")
+    return " · ".join(parts) or "No bindings"
 
 
 # --- 1.3.0: noticing bindings that disappear --------------------------------

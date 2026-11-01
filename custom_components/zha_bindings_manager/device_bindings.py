@@ -89,6 +89,9 @@ class DeviceBindings:
         self.coordinator: str | None = None
         self.exposed: set[str] = set()
         self.card: dict[str, tuple[str, list[dict]]] = {}
+        # Set by the binding watch: devices it expects bindings on keep their
+        # entities even after losing them all, so they can be rescanned.
+        self.extra_exposed: Any = None
 
     async def async_load(self) -> None:
         data = await self._scans_store.async_load()
@@ -104,6 +107,8 @@ class DeviceBindings:
         # Keep the last known coordinator if this data set is too small to guess from.
         self.coordinator = self._gateway_coordinator() or guess_coordinator(self.by_source) or self.coordinator
         exposed = devices_with_bindings(self.by_source, self.coordinator)
+        if self.extra_exposed is not None:
+            exposed |= set(self.extra_exposed())
         # Only devices ZHA actually has, so no orphan devices get created.
         self.exposed = {i for i in exposed if self.zha_device(i) is not None}
         async_dispatcher_send(self.hass, SIGNAL_BINDINGS_UPDATED)

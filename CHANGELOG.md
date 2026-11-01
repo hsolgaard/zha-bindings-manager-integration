@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.3.1]
+
+### Changed
+
+- **The Bindings sensor is short now.** Its state is a count, for example "Controls 2 · Controlled by 1", instead of
+  the full list, which was cut off on the device page and made a meaningless history graph. The names are in the
+  sensor's attributes (click it, then **Attributes**), under **controls** and **controlled by**, and are kept out
+  of the history database.
+- **With "Check bindings every night" on, Rescan bindings also counts as a check.** Two rescans after a binding
+  disappears raise the Repairs issue, so you don't have to wait for the nightly run.
+
+### Fixed
+
+- With "Check bindings every night" on, a device that loses all its bindings keeps its Bindings sensor and Rescan
+  button (showing "No bindings"), so it can still be rescanned and repaired. Before, both disappeared.
+
+Includes card 1.3.1, which has no changes.
+
 ## [1.3.0]
 
 ### Added

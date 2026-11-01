@@ -26,6 +26,9 @@ class BindingsSensor(SensorEntity):
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_icon = "mdi:link-variant"
     _attr_should_poll = False
+    # The lists can be long; keep them out of the history database. The short
+    # state ("Controls 2 · Controlled by 1") is what gets recorded.
+    _unrecorded_attributes = frozenset({"controls", "controlled_by", "last_rescanned"})
 
     def __init__(self, ieee: str) -> None:
         self._ieee = ieee
