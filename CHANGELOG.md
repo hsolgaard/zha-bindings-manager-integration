@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.3.2]
+
+### Fixed
+
+- **Bundled card 1.3.2: more device photos.** The card now finds a device's photo on zigbee2mqtt.io by its product
+  code, which often differs from the model ZHA shows (for example the Clipsal Wiser 2AX switch and the IKEA RODRET),
+  and tells Tuya devices that share a model string apart by manufacturer. See the
+  [card changelog](https://github.com/hsolgaard/zha-bindings-manager/blob/main/CHANGELOG.md).
+
 ## [1.3.1]
 
 ### Changed
