@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.4.1]
+
+### Security
+
+- **Only admins can save the card's shared data.** `zha_bindings_manager/save_state` now requires an admin, like the
+  sidebar page and ZHA's own commands. Reading is unchanged.
+- **Saved bindings are validated.** Only well-formed bindings (whole-number endpoints and cluster ids, colon-hex
+  addresses, group ids) are stored; anything else is dropped. Data saved by earlier versions is checked the same way
+  when it's read for the device-page entities, removal notices and the binding watch.
+- **Bundled card 1.4.1**, which validates saved bindings when it loads them and escapes binding fields on the page.
+- Together these close a way for a non-admin user to run script in an admin's browser. Thanks to Franck Nijhof
+  (@frenck) for spotting it in the HACS review.
+
 ## [1.4.0]
 
 ### Added
