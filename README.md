@@ -58,7 +58,7 @@ The integration is not in the default HACS store yet, so add it as a custom repo
 
 1. Open **HACS → ⋮ → Custom repositories**.
 2. Add `https://github.com/hsolgaard/zha-bindings-manager-integration` with type **Integration**.
-3. Search HACS for **ZHA Bindings Manager** (the integration, not the dashboard card) and select **Download**.
+3. Search HACS for **ZHA Bindings Manager** and open the entry of type **Integration** (not **ZHA Bindings Manager (card only)**, the Dashboard entry), then select **Download**.
 4. **Restart Home Assistant.**
 5. Go to **Settings → Devices & services → Add integration**, search for **ZHA Bindings Manager** and confirm. There's nothing to fill in.
 
