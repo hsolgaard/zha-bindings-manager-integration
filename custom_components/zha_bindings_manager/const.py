@@ -44,6 +44,7 @@ OPT_SHARED_STORAGE = "shared_storage"
 OPT_REMOVAL_NOTICES = "removal_notices"
 OPT_DEVICE_PAGE = "device_page_bindings"
 OPT_WATCH = "binding_watch"
+OPT_LOGBOOK = "logbook_attribution"
 DEFAULT_OPTIONS = {
     OPT_SIDEBAR_PANEL: True,
     OPT_LOAD_EVERYWHERE: False,
@@ -51,6 +52,7 @@ DEFAULT_OPTIONS = {
     OPT_REMOVAL_NOTICES: True,
     OPT_DEVICE_PAGE: True,
     OPT_WATCH: False,
+    OPT_LOGBOOK: False,
 }
 
 # Fired when binding data changes (the card saved a scan, or a device-page

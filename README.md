@@ -100,6 +100,7 @@ Go to **Settings → Devices & services → ZHA Bindings Manager → Configure**
 | **Notify when a removed device still has bindings pointing to it** | On | See [Removed-device notices](#removed-device-notices). |
 | **Show bindings on each device's page** | On | See [Bindings on device pages](#bindings-on-device-pages). |
 | **Check bindings every night and tell me when one disappears** | Off | See [Noticing bindings that disappear](#noticing-bindings-that-disappear). |
+| **Say in the logbook which remote switched a light** | Off | See [Which remote switched it?](#which-remote-switched-it) |
 
 ### Using the card on your own dashboards
 
@@ -154,6 +155,17 @@ Bindings can vanish without anyone noticing: a device is factory reset or re-pai
 - **What you can do:** **Put them back** binds them again with zha-toolkit and reads the device to check (wake a battery device first), or **I removed them on purpose** stops expecting them.
 
 Nothing is ever re-bound automatically. The checks use zha-toolkit, the same as the card.
+
+## Which remote switched it?
+
+A remote bound to a light switches it directly, so Home Assistant's logbook normally just says "Spots turned on", with no idea why. Most remotes are also bound to the coordinator when ZHA pairs them (that's how their button presses reach Home Assistant), and a remote sends each command to everything bound for that cluster. So Home Assistant hears the press as well.
+
+Turn on **Say in the logbook which remote switched a light** under Configure, and when a light changes within 3 seconds of a press on a remote bound to it (directly or through a group), the logbook gets an entry such as **Spots turned on by Hall dimmer (direct binding)**.
+
+- It uses the card's last scan of the remote (or a device-page rescan) to know which lights the remote is bound to.
+- Only On/Off, Level Control and Colour Control presses count. Holding a dimmer gives one "dimmed" entry, not one per step.
+- Changes Home Assistant made itself (from the UI, a script or an automation) are never attributed to a remote.
+- A remote that isn't bound to the coordinator can't be heard, so its presses get no entry. The card's Bindings tab shows coordinator bindings when **Hide coordinator bindings** is off.
 
 ## Installed the card from HACS too?
 
