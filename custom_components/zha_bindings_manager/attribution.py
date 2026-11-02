@@ -10,7 +10,8 @@ bound for that cluster.
 
 So when a zha_event arrives from a remote whose binding table (from the
 card's last scan or a device-page rescan) has it bound to lights or a group
-for that cluster, the lights it controls are watched for a few seconds.
+for that cluster, the lights it controls are watched for a few seconds (and changes from just before the press count too, as
+a light's own report can arrive first).
 A light that changes state in that window, on its own report rather than
 because of Home Assistant (no user and no automation behind the change),
 gets a logbook entry: "turned on by Kitchen RODRET (direct binding)".
@@ -37,6 +38,9 @@ ATTRIBUTED_CLUSTERS = {0x0006, 0x0008, 0x0300}
 # How long after a press a state change still counts as caused by it. Lights
 # usually report within a second; anything slower is left unattributed.
 WINDOW_SECONDS = 3.0
+# A light's own report can reach Home Assistant a moment before the press
+# does (1.4.2), so a press also claims changes from just before it.
+LOOKBACK_SECONDS = 1.5
 # Holding a dimmer sends a stream of commands; log each light once per hold.
 REPEAT_SECONDS = 10.0
 CONTROLLED_DOMAINS = {"light", "switch", "fan", "cover"}
@@ -125,6 +129,9 @@ class BindingAttribution:
         self._pending: dict[str, tuple[str, float]] = {}
         # (entity_id, source ieee, message) -> last logged at
         self._recent: dict[tuple[str, str, str], float] = {}
+        # entity_id -> (changed at, message, name, context) for changes no
+        # press has claimed yet, kept for LOOKBACK_SECONDS.
+        self._unclaimed: dict[str, tuple[float, str, str, Any]] = {}
 
     def async_start(self) -> CALLBACK_TYPE:
         unsubs = [
@@ -171,23 +178,20 @@ class BindingAttribution:
         targets = press_targets(bindings, self.data.coordinator, data.get("endpoint_id"), cluster_id, members)
         if not targets:
             return
-        expires = time.monotonic() + WINDOW_SECONDS
+        now = time.monotonic()
+        expires = now + WINDOW_SECONDS
         for ieee, endpoint in targets:
             for entity_id in self._entities_for(ieee, endpoint):
                 self._pending[entity_id] = (source, expires)
+                earlier = self._unclaimed.pop(entity_id, None)
+                if earlier and now - earlier[0] <= LOOKBACK_SECONDS:
+                    _at, message, name, context = earlier
+                    self._log(entity_id, source, message, name, context, now)
 
     @callback
     def _on_state_changed(self, event: Event) -> None:
-        if not self._pending:
-            return
-        entity_id = event.data.get("entity_id")
-        pending = self._pending.get(entity_id)
-        if not pending:
-            return
-        source, expires = pending
-        now = time.monotonic()
-        if now > expires:
-            self._pending.pop(entity_id, None)
+        entity_id = event.data.get("entity_id") or ""
+        if entity_id.split(".", 1)[0] not in CONTROLLED_DOMAINS:
             return
         if caused_by_home_assistant(event.context):
             return
@@ -199,6 +203,20 @@ class BindingAttribution:
         )
         if not message:
             return
+        now = time.monotonic()
+        name = new.name if new else entity_id
+        pending = self._pending.get(entity_id)
+        if pending and now <= pending[1]:
+            self._log(entity_id, pending[0], message, name, event.context, now)
+            return
+        if pending:
+            self._pending.pop(entity_id, None)
+        # Not claimed by a press (yet): the press may still be on its way.
+        self._unclaimed[entity_id] = (now, message, name, event.context)
+        if len(self._unclaimed) > 200:
+            self._unclaimed = {k: v for k, v in self._unclaimed.items() if now - v[0] <= LOOKBACK_SECONDS}
+
+    def _log(self, entity_id: str, source: str, message: str, name: str, context: Any, now: float) -> None:
         key = (entity_id, source, message)
         if now - self._recent.get(key, -1e9) < REPEAT_SECONDS:
             return
@@ -209,12 +227,12 @@ class BindingAttribution:
         self.hass.bus.async_fire(
             EVENT_LOGBOOK_ENTRY,
             {
-                "name": new.name if new else entity_id,
+                "name": name,
                 "message": f"{message} by {source_name} (direct binding)",
                 "domain": DOMAIN,
                 "entity_id": entity_id,
             },
-            context=event.context,
+            context=context,
         )
 
 

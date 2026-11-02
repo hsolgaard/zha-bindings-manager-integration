@@ -145,3 +145,29 @@ async def test_reports_and_unbound_remotes_are_ignored(hass: HomeAssistant, hass
     hass.states.async_set("light.spots", "on", {"friendly_name": "Spots"})
     await hass.async_block_till_done()
     assert logged == []
+
+
+async def test_light_reporting_just_before_the_press_is_attributed(hass: HomeAssistant, hass_storage):
+    """1.4.2: the light's own report can arrive before the press."""
+    logged = await _setup(hass, hass_storage, {OPT_LOGBOOK: True})
+    hass.states.async_set("light.spots", "on", {"friendly_name": "Spots"})
+    await hass.async_block_till_done()
+    assert logged == []
+    _press(hass)
+    await hass.async_block_till_done()
+    assert [e["message"] for e in logged] == ["turned on by Rodret (direct binding)"]
+    # Not claimed twice when the same press is followed by nothing else.
+    _press(hass)
+    await hass.async_block_till_done()
+    assert len(logged) == 1
+
+
+async def test_change_long_before_the_press_is_not_attributed(hass: HomeAssistant, hass_storage, monkeypatch):
+    logged = await _setup(hass, hass_storage, {OPT_LOGBOOK: True})
+    monkeypatch.setattr(attr, "LOOKBACK_SECONDS", 0.0)
+    hass.states.async_set("light.spots", "on", {"friendly_name": "Spots"})
+    await hass.async_block_till_done()
+    await asyncio.sleep(0.01)
+    _press(hass)
+    await hass.async_block_till_done()
+    assert logged == []

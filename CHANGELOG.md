@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.4.2]
+
+### Fixed
+
+- **Logbook attribution no longer misses a change when the light reports first.** A light's own report can reach Home
+  Assistant a moment before the remote's press does, so a press now also claims a change from up to 1.5 seconds
+  before it. Previously that change got no "by … (direct binding)" entry.
+- **Bundled card 1.4.2:** the device side panel only lists real control under Controls and Controlled by. See the
+  [card changelog](https://github.com/hsolgaard/zha-bindings-manager/blob/main/CHANGELOG.md).
+
 ## [1.4.1]
 
 ### Security
