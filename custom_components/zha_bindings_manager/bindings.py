@@ -8,6 +8,7 @@ Binding dicts use the card's normalized shape (see the card's parser.js):
 """
 from __future__ import annotations
 
+import re
 from typing import Any, Iterable
 
 CLUSTER_NAMES = {
@@ -76,6 +77,81 @@ def _binding(source: str, src_ep: Any, cluster_id: int, is_group: bool, dst_ieee
 def identity_key(b: dict) -> str:
     target = f"g:{b.get('groupId')}" if b.get("isGroup") else f"d:{norm_ieee(b.get('targetIeee'))}:{b.get('targetEndpoint')}"
     return f"{norm_ieee(b.get('sourceIeee'))}|{b.get('sourceEndpoint')}|{int(b.get('clusterId'))}|{target}"
+
+
+_IEEE_RE = re.compile(r"^[0-9a-f]{2}(:[0-9a-f]{2}){7}$")
+
+
+def is_ieee(value: Any) -> bool:
+    return isinstance(value, str) and bool(_IEEE_RE.match(value.strip().lower()))
+
+
+def _int_in(value: Any, maximum: int) -> int | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        if isinstance(value, str):
+            v = value.strip()
+            n = int(v, 16) if v.lower().startswith("0x") else int(v)
+        elif isinstance(value, float):
+            if not value.is_integer():
+                return None
+            n = int(value)
+        elif isinstance(value, int):
+            n = value
+        else:
+            return None
+    except ValueError:
+        return None
+    return n if 0 <= n <= maximum else None
+
+
+def sanitize_binding(b: Any, source_key: str) -> dict | None:
+    """One stored binding rebuilt from strictly typed fields, or None if
+    it's malformed. Stored scan data comes from the card, so it's treated as
+    untrusted (1.4.1)."""
+    if not isinstance(b, dict):
+        return None
+    source = norm_ieee(b.get("sourceIeee") if isinstance(b.get("sourceIeee"), str) else source_key)
+    if not is_ieee(source):
+        return None
+    src_ep = _int_in(b.get("sourceEndpoint"), 255)
+    cluster = _int_in(b.get("clusterId"), 0xFFFF)
+    if src_ep is None or cluster is None:
+        return None
+    is_group = b.get("isGroup") is True
+    if is_group:
+        group = _int_in(b.get("groupId"), 0xFFFF)
+        if group is None:
+            return None
+        return _binding(source, src_ep, cluster, True, None, None, group)
+    target = norm_ieee(b.get("targetIeee")) if isinstance(b.get("targetIeee"), str) else ""
+    dst_ep = _int_in(b.get("targetEndpoint"), 255)
+    if not is_ieee(target) or dst_ep is None:
+        return None
+    return _binding(source, src_ep, cluster, False, target, dst_ep, None)
+
+
+def sanitize_stored_bindings(raw: Any) -> tuple[dict[str, list[dict]], int]:
+    """{ieee: [binding]} as stored -> (only well-formed entries, number dropped)."""
+    out: dict[str, list[dict]] = {}
+    dropped = 0
+    if not isinstance(raw, dict):
+        return out, 0
+    for key, items in raw.items():
+        ieee = norm_ieee(key)
+        if not is_ieee(ieee) or not isinstance(items, list):
+            dropped += len(items) if isinstance(items, list) else 1
+            continue
+        clean = []
+        for b in items:
+            s = sanitize_binding(b, ieee)
+            if s is None:
+                dropped += 1
+            else:
+                clean.append(s)
+        out[ieee] = clean
+    return out, dropped
 
 
 class BindsGetFailed(Exception):

@@ -29,6 +29,7 @@ from .bindings import (
     guess_coordinator,
     norm_ieee,
     parse_binds_get,
+    sanitize_stored_bindings,
     summarize,
 )
 from .const import DOMAIN, SIGNAL_BINDINGS_UPDATED
@@ -59,12 +60,15 @@ def card_bindings(store_data: dict[str, Any]) -> dict[str, tuple[str, list[dict]
         last = ((state.get("scanState") or {}).get("last_complete")) or {}
         saved_at = last.get("savedAt") or entry.get("updated_at") or ""
         history = state.get("history") or {}
-        for ieee, lst in (last.get("bindings") or {}).items():
-            key = norm_ieee(ieee)
-            h = history.get(key) or history.get(ieee) or {}
-            read_at = h.get("lastSuccessAt") or saved_at
+        clean, _dropped = sanitize_stored_bindings(last.get("bindings"))
+        if not isinstance(history, dict):
+            history = {}
+        for key, lst in clean.items():
+            h = history.get(key)
+            read_at = h.get("lastSuccessAt") if isinstance(h, dict) else None
+            read_at = read_at if isinstance(read_at, str) else saved_at if isinstance(saved_at, str) else ""
             if key not in out or read_at > out[key][0]:
-                out[key] = (read_at, lst if isinstance(lst, list) else [])
+                out[key] = (read_at, lst)
     return out
 
 

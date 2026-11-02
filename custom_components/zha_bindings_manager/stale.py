@@ -23,8 +23,9 @@ def _saved_bindings(entry: Any) -> dict[str, list]:
     state = (entry or {}).get("state") if isinstance(entry, dict) else None
     scan = (state or {}).get("scanState") or {}
     last = scan.get("last_complete") or {}
-    bindings = last.get("bindings") or {}
-    return bindings if isinstance(bindings, dict) else {}
+    from .bindings import sanitize_stored_bindings
+
+    return sanitize_stored_bindings(last.get("bindings"))[0]
 
 
 def bindings_to_removed_target(

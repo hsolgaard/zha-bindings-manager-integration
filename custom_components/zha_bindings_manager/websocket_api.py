@@ -9,7 +9,8 @@ actually needs them:
     version, the bundled card's version and which options are switched on.
   get_state — returns the whole stored state blob for one card instance,
     plus the updated_at timestamp it was last saved with.
-  save_state — writes the whole state blob for one card instance.
+  save_state — writes the whole state blob for one card instance. Admins
+    only, and saved bindings are validated (1.4.1).
     Last-write-wins, guarded by base_updated_at: if what's currently
     stored doesn't match what the client last saw, the write is rejected
     with a "stale_write" error instead of silently clobbering a newer
@@ -39,12 +40,27 @@ from .const import (
     STORAGE_KEY,
     STORAGE_VERSION,
 )
+from .bindings import sanitize_stored_bindings
 from .card_frontend import bundled_card_version
 from .options import current_options
 
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def sanitize_state(state: dict[str, Any]) -> dict[str, Any]:
+    """Only well-formed bindings are stored (1.4.1): integer endpoints and
+    cluster ids, colon-hex IEEE addresses. Everything else in the blob is
+    the card's own settings and is kept as sent."""
+    scan = state.get("scanState")
+    if not isinstance(scan, dict):
+        return state
+    last = scan.get("last_complete")
+    if not isinstance(last, dict) or "bindings" not in last:
+        return state
+    clean, _dropped = sanitize_stored_bindings(last.get("bindings"))
+    return {**state, "scanState": {**scan, "last_complete": {**last, "bindings": clean}}}
 
 
 @callback
@@ -130,6 +146,7 @@ async def websocket_get_state(
         vol.Optional("base_updated_at"): vol.Any(str, None),
     }
 )
+@websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_save_state(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
@@ -158,7 +175,7 @@ async def websocket_save_state(
         return
 
     new_updated_at = _now_iso()
-    data[card_id] = {"updated_at": new_updated_at, "state": msg["state"]}
+    data[card_id] = {"updated_at": new_updated_at, "state": sanitize_state(msg["state"])}
     await store.async_save(data)
     connection.send_result(msg["id"], {"updated_at": new_updated_at})
     # A new scan may change what the device-page entities show.

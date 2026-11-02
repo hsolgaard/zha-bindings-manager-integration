@@ -80,3 +80,17 @@ def test_summary_both_directions_groups_and_coordinator_left_out():
 def test_summary_text_counts_both_directions():
     s = {"controls": ["A (On/Off)", "B (On/Off)"], "controlled_by": ["C (On/Off)"]}
     assert summary_text(s) == "Controls 2 · Controlled by 1"
+
+
+def test_sanitize_stored_bindings_drops_malformed_entries():
+    from custom_components.zha_bindings_manager.bindings import sanitize_stored_bindings
+
+    r, l = "aa:aa:aa:aa:aa:aa:aa:01", "bb:bb:bb:bb:bb:bb:bb:02"
+    good = {"sourceIeee": r, "sourceEndpoint": "1", "clusterId": "0x0006", "isGroup": False, "targetIeee": l.upper(), "targetEndpoint": 1.0}
+    group = {"sourceIeee": r, "sourceEndpoint": 1, "clusterId": 8, "isGroup": True, "groupId": 5}
+    clean, dropped = sanitize_stored_bindings(
+        {r: [good, group, {**good, "clusterId": None}, {**good, "sourceEndpoint": 300}, {**good, "targetIeee": "nope"}, "junk"], "bad": [good]}
+    )
+    assert dropped == 5
+    assert [(b["clusterId"], b["sourceEndpoint"], b["targetIeee"], b["groupId"]) for b in clean[r]] == [(6, 1, l, None), (8, 1, None, 5)]
+    assert sanitize_stored_bindings(None) == ({}, 0)
