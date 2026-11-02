@@ -30,6 +30,7 @@ from .const import (
     BACKEND_VERSION,
     DOMAIN,
     OPT_DEVICE_PAGE,
+    OPT_LOGBOOK,
     OPT_WATCH,
     OPT_LOAD_EVERYWHERE,
     OPT_REMOVAL_NOTICES,
@@ -97,6 +98,7 @@ async def websocket_get_capabilities(
                 "removal_notices": opts[OPT_REMOVAL_NOTICES],
                 "device_page_bindings": opts[OPT_DEVICE_PAGE],
                 "binding_watch": opts[OPT_WATCH],
+                "logbook_attribution": opts[OPT_LOGBOOK],
             },
         },
     )

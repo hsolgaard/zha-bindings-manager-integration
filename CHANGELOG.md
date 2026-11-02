@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.4.0]
+
+### Added
+
+- **Say in the logbook which remote switched a light** (option, off by default). When a remote is bound to a light,
+  directly or through a group, and Home Assistant also hears the press (most remotes are bound to the coordinator
+  too), a light that changes within 3 seconds gets a logbook entry such as "Spots turned on by Hall dimmer (direct
+  binding)". It uses the card's last scan of the remote. Changes made from Home Assistant itself (UI, scripts,
+  automations) are never attributed to a remote, and holding a dimmer gives one entry per light, not one per step.
+  Suggested by HarvsG in the "Is device binding a second-class citizen?" WTH thread.
+- **Bundled card 1.4.0:** a device side panel instead of the Explode dialog, and **Control lights with a remote…** in
+  the toolbar with a clear new-or-existing group choice. See the
+  [card changelog](https://github.com/hsolgaard/zha-bindings-manager/blob/main/CHANGELOG.md).
+
 ## [1.3.2]
 
 ### Fixed

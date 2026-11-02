@@ -9,7 +9,9 @@ Configure:
   - bindings on each bound ZHA device's own page: a "Bindings" sensor and a
     "Rescan bindings" button (1.2.0),
   - a nightly check that raises a Repairs issue when a binding disappears,
-    with Re-apply (1.3.0, off by default).
+    with Re-apply (1.3.0, off by default),
+  - logbook entries naming the remote that switched a light over a direct
+    binding (1.4.0, off by default).
 
 Removing this integration doesn't delete anything the card saved in a
 browser; the card falls back to browser storage the next time it loads.
@@ -20,7 +22,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
 from homeassistant.core import CoreState, Event, HomeAssistant
 
-from .const import DOMAIN, OLD_TITLE, OPT_DEVICE_PAGE, OPT_REMOVAL_NOTICES, OPT_WATCH, PLATFORMS, TITLE
+from .const import DOMAIN, OLD_TITLE, OPT_DEVICE_PAGE, OPT_LOGBOOK, OPT_REMOVAL_NOTICES, OPT_WATCH, PLATFORMS, TITLE
 from .device_bindings import DeviceBindings
 from .duplicate_check import async_check_card_installed_twice
 from .card_frontend import async_setup_frontend, async_unload_frontend
@@ -48,8 +50,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     domain_data.pop("device_bindings", None)
     domain_data.pop("watch", None)
+    domain_data.pop("attribution", None)
     domain_data["platforms_loaded"] = False
-    if options[OPT_DEVICE_PAGE] or options[OPT_WATCH]:
+    if options[OPT_DEVICE_PAGE] or options[OPT_WATCH] or options[OPT_LOGBOOK]:
         device_bindings = DeviceBindings(hass)
         domain_data["device_bindings"] = device_bindings
         await device_bindings.async_load()
@@ -60,6 +63,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             await watch.async_load()
             domain_data["watch"] = watch
             entry.async_on_unload(watch.async_start())
+        if options[OPT_LOGBOOK]:
+            from .attribution import BindingAttribution
+
+            attribution = BindingAttribution(hass, device_bindings)
+            domain_data["attribution"] = attribution
+            entry.async_on_unload(attribution.async_start())
         if options[OPT_DEVICE_PAGE]:
             await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
             domain_data["platforms_loaded"] = True
@@ -94,6 +103,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     domain_data = hass.data.get(DOMAIN, {})
     domain_data.pop("device_bindings", None)
     domain_data.pop("watch", None)
+    domain_data.pop("attribution", None)
     if domain_data.pop("platforms_loaded", False):
         return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     return True
