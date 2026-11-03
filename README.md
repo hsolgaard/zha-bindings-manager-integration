@@ -101,6 +101,8 @@ Go to **Settings → Devices & services → ZHA Bindings Manager → Configure**
 | **Show bindings on each device's page** | On | See [Bindings on device pages](#bindings-on-device-pages). |
 | **Check bindings every night and tell me when one disappears** | Off | See [Noticing bindings that disappear](#noticing-bindings-that-disappear). |
 | **Say in the logbook which remote switched a light** | Off | See [Which remote switched it?](#which-remote-switched-it) |
+| **Experimental features** | Off | A **Network** tab in the card (beta) and a route check for each binding. See [Network tab (experimental)](#network-tab-experimental). |
+| **Link quality: good from / weak below** | 150 / 80 | Thresholds for colouring links on the Network tab. **Reset** goes back to the recommended values. |
 
 ### Using the card on your own dashboards
 
@@ -122,7 +124,7 @@ A badge in the card's toolbar always shows which mode is active: 🔒 **This bro
 - You can switch either way at any time in the card's ⚙ panel, under **Storage**.
 - If two browsers save at nearly the same moment, the second save is refused and that browser reloads, rather than silently overwriting the first.
 
-Data is saved with Home Assistant's own storage helper, in `.storage/zha_bindings_manager.state` in your config directory, so it's included in Home Assistant backups.
+Data is saved with Home Assistant's own storage helper, in `.storage/zha_bindings_manager/state` in your config directory, so it's included in Home Assistant backups.
 
 ## Removed-device notices
 
@@ -142,7 +144,7 @@ Each ZHA device that controls, or is controlled by, another device or a group ge
 - **Bindings**: how many devices or groups it controls and is controlled by, for example "Controls 2 · Controlled by 1". Click it and open **Attributes** for the names, for example "Kitchen spots (On/Off, Level Control)" or "Hall dimmer via group Kitchen (On/Off)", and for **Open in ZHA Bindings Manager**, a link to that device in the card. (The link needs Home Assistant's address under Settings → System → Network, and the sidebar page switched on.)
 - **Rescan bindings**: reads the device's binding table again with zha-toolkit and updates the sensor. Battery devices are usually asleep: press a button on the device first.
 
-The sensor uses the card's most recent scan of each device, or a newer rescan from the device page. Devices whose only bindings go to the coordinator (the routine reporting every device has) get nothing, to keep the number of entities down. To switch it off, untick **Show bindings on each device's page** under Configure.
+The sensor uses the card's most recent scan of each device, or a newer rescan from the device page. The card also picks up those newer reads (and the nightly check's) the next time it opens, so both show the same bindings. Devices whose only bindings go to the coordinator (the routine reporting every device has) get nothing, to keep the number of entities down. To switch it off, untick **Show bindings on each device's page** under Configure.
 
 ## Noticing bindings that disappear
 
@@ -152,6 +154,7 @@ Bindings can vanish without anyone noticing: a device is factory reset or re-pai
 - **When it checks:** at 03:17 every night it reads the binding table of each device that controls another device or a group. Battery devices are usually asleep then, so they're checked the next time they're used (a button press) instead, at most once every 20 hours.
 - **When it tells you:** only when a binding is missing in **two checks in a row**. A device that doesn't answer never counts. The issue appears under **Settings → System → Repairs**, naming the device and the missing bindings.
 - **Checking straight away:** pressing **Rescan bindings** on a device's page counts as a check too, so two rescans after a binding goes missing raise the issue without waiting for the night.
+- **Seeing it in the card:** the Repairs issue has a link that opens the device in ZHA Bindings Manager (when the sidebar page is on).
 - **What you can do:** **Put them back** binds them again with zha-toolkit and reads the device to check (wake a battery device first), or **I removed them on purpose** stops expecting them.
 
 Nothing is ever re-bound automatically. The checks use zha-toolkit, the same as the card.
@@ -166,6 +169,14 @@ Turn on **Say in the logbook which remote switched a light** under Configure, an
 - Only On/Off, Level Control and Colour Control presses count. Holding a dimmer gives one "dimmed" entry, not one per step.
 - Changes Home Assistant made itself (from the UI, a script or an automation) are never attributed to a remote.
 - A remote that isn't bound to the coordinator can't be heard, so its presses get no entry. The card's Bindings tab shows coordinator bindings when **Hide coordinator bindings** is off.
+
+## Network tab (experimental)
+
+Turn on **Experimental features** under Configure to get a **Network** tab in the card, marked *beta*. It reads the routing and neighbour tables of your routers with `zha_toolkit.get_routes_and_neighbours`, only when you click **Scan network** (or read one router from its side panel), and shows link quality on your floor plan, the routes your bindings take, battery devices with their parent router, and suggestions for weak spots. Nothing on the network is changed.
+
+- The latest tables from each router are saved in `.storage/zha_bindings_manager/mesh`, so the map is the same in every browser and survives a reload.
+- Links are coloured with the **Link quality** thresholds under Configure (good from 150, weak below 80 by default).
+- Experimental features may change or go away in a later release. The card's README describes the [Network tab](https://github.com/hsolgaard/zha-bindings-manager#check-your-zigbee-network-beta-needs-the-integration) in detail.
 
 ## Installed the card from HACS too?
 

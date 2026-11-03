@@ -7,6 +7,8 @@ from homeassistant import data_entry_flow
 from homeassistant.components.repairs import RepairsFlow
 from homeassistant.core import HomeAssistant
 
+from .const import OPT_SIDEBAR_PANEL, device_link_path
+from .options import current_options
 from .watch import get_watch
 
 
@@ -18,13 +20,21 @@ class BindingMissingFlow(RepairsFlow):
     def __init__(self, ieee: str | None) -> None:
         self._ieee = ieee
 
+    def _card_link(self) -> str:
+        """A line linking to the device in the card (1.5.0). "Learn more"
+        isn't shown for fixable issues, so the link goes in the text."""
+        if not self._ieee or not current_options(self.hass)[OPT_SIDEBAR_PANEL]:
+            return ""
+        return f"\n\n[Open this device in ZHA Bindings Manager]({device_link_path(self._ieee)}) to see its bindings."
+
     def _placeholders(self) -> dict[str, str]:
         watch = get_watch(self.hass)
         if watch is None:
-            return {"device": self._ieee or "", "bindings": ""}
+            return {"device": self._ieee or "", "bindings": "", "card_link": self._card_link()}
         return {
             "device": watch.data.names().get(self._ieee or "", self._ieee or ""),
             "bindings": watch.describe(watch.missing(self._ieee or "")),
+            "card_link": self._card_link(),
         }
 
     async def async_step_init(self, user_input=None) -> data_entry_flow.FlowResult:

@@ -16,7 +16,12 @@ from homeassistant.core import callback
 from .const import (
     DOMAIN,
     OPT_DEVICE_PAGE,
+    LQI_GOOD_DEFAULT,
+    LQI_WEAK_DEFAULT,
+    OPT_EXPERIMENTAL,
     OPT_LOGBOOK,
+    OPT_LQI_GOOD,
+    OPT_LQI_WEAK,
     OPT_WATCH,
     OPT_LOAD_EVERYWHERE,
     OPT_REMOVAL_NOTICES,
@@ -52,8 +57,15 @@ class ZhaBindingsManagerOptionsFlow(config_entries.OptionsFlow):
     """The on/off switches."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None):
+        errors: dict[str, str] = {}
         if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+            data = dict(user_input)
+            if data.pop("reset_lqi", False):
+                data[OPT_LQI_GOOD], data[OPT_LQI_WEAK] = LQI_GOOD_DEFAULT, LQI_WEAK_DEFAULT
+            if data.get(OPT_LQI_WEAK, LQI_WEAK_DEFAULT) >= data.get(OPT_LQI_GOOD, LQI_GOOD_DEFAULT):
+                errors["base"] = "lqi_order"
+            else:
+                return self.async_create_entry(title="", data=data)
 
         # self.handler is the entry id on every supported HA version, unlike
         # the config_entry property, which only exists in newer ones.
@@ -67,6 +79,10 @@ class ZhaBindingsManagerOptionsFlow(config_entries.OptionsFlow):
                 vol.Required(OPT_DEVICE_PAGE, default=current[OPT_DEVICE_PAGE]): bool,
                 vol.Required(OPT_WATCH, default=current[OPT_WATCH]): bool,
                 vol.Required(OPT_LOGBOOK, default=current[OPT_LOGBOOK]): bool,
+                vol.Required(OPT_EXPERIMENTAL, default=current[OPT_EXPERIMENTAL]): bool,
+                vol.Required(OPT_LQI_GOOD, default=current[OPT_LQI_GOOD]): vol.All(vol.Coerce(int), vol.Range(min=2, max=255)),
+                vol.Required(OPT_LQI_WEAK, default=current[OPT_LQI_WEAK]): vol.All(vol.Coerce(int), vol.Range(min=1, max=254)),
+                vol.Optional("reset_lqi", default=False): bool,
             }
         )
-        return self.async_show_form(step_id="init", data_schema=schema)
+        return self.async_show_form(step_id="init", data_schema=schema, errors=errors)

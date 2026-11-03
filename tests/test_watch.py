@@ -108,6 +108,15 @@ async def test_reapply_binds_checks_and_clears_the_issue(setup):
     manager = repairs_flow_manager(hass)
     flow = await manager.async_init(DOMAIN, data={"issue_id": issue_id_for(R)})
     assert flow["type"] == "menu" and flow["menu_options"] == ["reapply", "forget"]
+    # 1.5.0: the text links to the device in the card when the sidebar page is on.
+    from custom_components.zha_bindings_manager.const import OPT_SIDEBAR_PANEL
+    from custom_components.zha_bindings_manager.options import current_options
+
+    link = flow["description_placeholders"]["card_link"]
+    if current_options(hass)[OPT_SIDEBAR_PANEL]:
+        assert f"(/zha-bindings-manager?device={R})" in link
+    else:
+        assert link == ""
     flow = await manager.async_configure(flow["flow_id"], {"next_step_id": "reapply"})
     assert flow["type"] == "form" and flow["step_id"] == "reapply"
     flow = await manager.async_configure(flow["flow_id"], {})

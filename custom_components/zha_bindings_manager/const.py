@@ -45,6 +45,12 @@ OPT_REMOVAL_NOTICES = "removal_notices"
 OPT_DEVICE_PAGE = "device_page_bindings"
 OPT_WATCH = "binding_watch"
 OPT_LOGBOOK = "logbook_attribution"
+OPT_EXPERIMENTAL = "experimental_features"
+OPT_LQI_GOOD = "lqi_good"
+OPT_LQI_WEAK = "lqi_weak"
+# Recommended link-quality thresholds (experimental route check / network map).
+LQI_GOOD_DEFAULT = 150
+LQI_WEAK_DEFAULT = 80
 DEFAULT_OPTIONS = {
     OPT_SIDEBAR_PANEL: True,
     OPT_LOAD_EVERYWHERE: False,
@@ -53,6 +59,9 @@ DEFAULT_OPTIONS = {
     OPT_DEVICE_PAGE: True,
     OPT_WATCH: False,
     OPT_LOGBOOK: False,
+    OPT_EXPERIMENTAL: False,
+    OPT_LQI_GOOD: LQI_GOOD_DEFAULT,
+    OPT_LQI_WEAK: LQI_WEAK_DEFAULT,
 }
 
 # Fired when binding data changes (the card saved a scan, or a device-page

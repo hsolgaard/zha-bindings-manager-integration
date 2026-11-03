@@ -93,3 +93,19 @@ async def test_saved_bindings_are_validated(hass: HomeAssistant, hass_ws_client)
     assert list(bindings) == [r]
     assert len(bindings[r]) == 1 and bindings[r][0]["clusterId"] == 6 and bindings[r][0]["targetEndpoint"] == 1
     assert "<img" not in str(stored)
+
+
+async def test_device_scans_returns_the_integrations_own_reads(hass: HomeAssistant, hass_ws_client, hass_storage):
+    """1.5.0: the card can pick up rescans done by the integration."""
+    r, l = "aa:aa:aa:aa:aa:aa:aa:01", "bb:bb:bb:bb:bb:bb:bb:02"
+    good = {"sourceIeee": r, "sourceEndpoint": 1, "clusterId": 6, "isGroup": False, "targetIeee": l, "targetEndpoint": 1}
+    hass_storage["zha_bindings_manager/scans"] = {
+        "version": 1,
+        "key": "zha_bindings_manager/scans",
+        "data": {r: {"at": "2026-11-03T10:00:00+00:00", "bindings": [good, {**good, "clusterId": "<b>"}], "partial": False}, "junk": "x"},
+    }
+    client = await _client(hass, hass_ws_client)
+    await client.send_json({"id": 1, "type": f"{DOMAIN}/device_scans"})
+    res = (await client.receive_json())["result"]["scans"]
+    assert list(res) == [r]
+    assert res[r]["at"] == "2026-11-03T10:00:00+00:00" and len(res[r]["bindings"]) == 1

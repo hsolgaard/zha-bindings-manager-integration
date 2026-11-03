@@ -31,7 +31,10 @@ from .const import (
     BACKEND_VERSION,
     DOMAIN,
     OPT_DEVICE_PAGE,
+    OPT_EXPERIMENTAL,
     OPT_LOGBOOK,
+    OPT_LQI_GOOD,
+    OPT_LQI_WEAK,
     OPT_WATCH,
     OPT_LOAD_EVERYWHERE,
     OPT_REMOVAL_NOTICES,
@@ -40,7 +43,7 @@ from .const import (
     STORAGE_KEY,
     STORAGE_VERSION,
 )
-from .bindings import sanitize_stored_bindings
+from .bindings import norm_ieee, sanitize_stored_bindings
 from .card_frontend import bundled_card_version
 from .options import current_options
 
@@ -69,6 +72,12 @@ def async_register_websocket_commands(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, websocket_get_capabilities)
     websocket_api.async_register_command(hass, websocket_get_state)
     websocket_api.async_register_command(hass, websocket_save_state)
+    from .mesh import websocket_mesh_get, websocket_mesh_read
+
+    websocket_api.async_register_command(hass, websocket_device_scans)
+
+    websocket_api.async_register_command(hass, websocket_mesh_read)
+    websocket_api.async_register_command(hass, websocket_mesh_get)
 
 
 def _get_store(hass: HomeAssistant) -> storage.Store:
@@ -115,7 +124,9 @@ async def websocket_get_capabilities(
                 "device_page_bindings": opts[OPT_DEVICE_PAGE],
                 "binding_watch": opts[OPT_WATCH],
                 "logbook_attribution": opts[OPT_LOGBOOK],
+                "experimental_features": opts[OPT_EXPERIMENTAL],
             },
+            "lqi_thresholds": {"good": opts[OPT_LQI_GOOD], "weak": opts[OPT_LQI_WEAK]},
         },
     )
 
@@ -182,3 +193,29 @@ async def websocket_save_state(
     device_bindings = hass.data.get(DOMAIN, {}).get("device_bindings")
     if device_bindings is not None:
         hass.async_create_task(device_bindings.async_refresh())
+
+
+@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/device_scans"})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def websocket_device_scans(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Binding tables the integration read itself (device-page Rescan
+    button, nightly binding check), so the card can use newer ones (1.5.0).
+    {ieee: {"at": iso time, "bindings": [...], "partial": bool}}"""
+    from .device_bindings import SCANS_STORAGE_KEY, get_device_bindings
+
+    data = get_device_bindings(hass)
+    if data is not None:
+        scans = data.scans
+    else:
+        raw = await storage.Store(hass, 1, SCANS_STORAGE_KEY).async_load()
+        scans = raw if isinstance(raw, dict) else {}
+    out = {}
+    for ieee, scan in scans.items():
+        if not isinstance(scan, dict) or not isinstance(scan.get("at"), str):
+            continue
+        clean, _dropped = sanitize_stored_bindings({ieee: scan.get("bindings") or []})
+        out[norm_ieee(ieee)] = {"at": scan["at"], "bindings": clean.get(norm_ieee(ieee), []), "partial": bool(scan.get("partial"))}
+    connection.send_result(msg["id"], {"scans": out})

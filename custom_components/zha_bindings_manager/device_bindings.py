@@ -76,6 +76,8 @@ def merge_sources(card: dict[str, tuple[str, list]], scans: dict[str, dict]) -> 
     """Newest per device of the card's data and rescans done here."""
     merged = {k: v[1] for k, v in card.items()}
     for ieee, scan in (scans or {}).items():
+        if not isinstance(scan, dict):
+            continue  # malformed entry: ignore rather than fail setup
         key = norm_ieee(ieee)
         if key not in card or (scan.get("at") or "") > card[key][0]:
             merged[key] = scan.get("bindings") or []
