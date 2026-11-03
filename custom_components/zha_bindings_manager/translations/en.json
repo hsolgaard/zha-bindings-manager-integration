@@ -22,7 +22,11 @@
           "removal_notices": "Notify when a removed device still has bindings pointing to it",
           "device_page_bindings": "Show bindings on each device's page",
           "binding_watch": "Check bindings every night and tell me when one disappears",
-          "logbook_attribution": "Say in the logbook which remote switched a light"
+          "logbook_attribution": "Say in the logbook which remote switched a light",
+          "experimental_features": "Experimental features",
+          "lqi_good": "Link quality: good from",
+          "lqi_weak": "Link quality: weak below",
+          "reset_lqi": "Reset link quality thresholds to recommended (150 and 80)"
         },
         "data_description": {
           "sidebar_panel": "Admins only. Runs the card full-page. The card's file loads only when you open this page.",
@@ -31,9 +35,16 @@
           "removal_notices": "Shows a Home Assistant notification naming the devices still bound to a device you remove, based on the card's last scan.",
           "device_page_bindings": "Adds a Bindings sensor and a Rescan bindings button to the page of each ZHA device that controls, or is controlled by, another device or a group. Uses the card's last scan.",
           "binding_watch": "Reads the binding table of every device with bindings at 03:17. Battery devices are checked the next time they're used instead. A binding missing twice in a row shows up in Repairs, with a button to put it back. Nothing is changed automatically. Uses the card's scans as the starting point.",
-          "logbook_attribution": "When a remote is bound to lights or a group and Home Assistant also hears the press (most remotes are bound to the coordinator too), a light that changes within 3 seconds gets a logbook entry such as \"turned on by Kitchen remote (direct binding)\". Uses the card's last scan of the remote. Changes made by Home Assistant itself aren't attributed."
+          "logbook_attribution": "When a remote is bound to lights or a group and Home Assistant also hears the press (most remotes are bound to the coordinator too), a light that changes within 3 seconds gets a logbook entry such as \"turned on by Kitchen remote (direct binding)\". Uses the card's last scan of the remote. Changes made by Home Assistant itself aren't attributed.",
+          "experimental_features": "Features still being tested; they may change or go away. Currently: a route check for each binding and a network map, both built from the routing and neighbour tables of your routers, read with zha-toolkit only when you ask.",
+          "lqi_good": "Links with at least this link quality (LQI, 0-255) count as good. Recommended: 150.",
+          "lqi_weak": "Links below this count as weak. Recommended: 80. Must be lower than the good value.",
+          "reset_lqi": "Tick and submit to go back to the recommended values."
         }
       }
+    },
+    "error": {
+      "lqi_order": "The weak threshold must be lower than the good threshold."
     }
   },
   "issues": {
@@ -47,7 +58,7 @@
         "step": {
           "init": {
             "title": "Bindings disappeared from {device}",
-            "description": "These bindings were on {device} before, but weren't there in the last two checks:\n\n{bindings}\n\nThis happens when a device is factory reset, re-paired, or loses its binding table after a firmware update. A remote or switch then stops controlling its lights.",
+            "description": "These bindings were on {device} before, but weren't there in the last two checks:\n\n{bindings}\n\nThis happens when a device is factory reset, re-paired, or loses its binding table after a firmware update. A remote or switch then stops controlling its lights.{card_link}",
             "menu_options": {
               "reapply": "Put them back",
               "forget": "I removed them on purpose"

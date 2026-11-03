@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.5.0]
+
+### Added
+
+- **Experimental features** option (off by default). Turns on the card's **Network tab** (beta) and route check,
+  which read your routers' routing and neighbour tables with zha-toolkit only when you ask. The latest tables are
+  saved, so the map is the same in every browser.
+- **Link quality thresholds** under Configure (good from 150, weak below 80), with a reset to the recommended values.
+- **The Repairs issue for a missing binding links to the device in the card**, when the sidebar page is on.
+- **The card uses the integration's newer binding reads** (device-page Rescan and the nightly check), so both show
+  the same bindings.
+- **Bundled card 1.5.0**, with a new **Groups** tab for adding and removing lights, binding remotes and deleting groups
+  safely. See the
+  [card changelog](https://github.com/hsolgaard/zha-bindings-manager/blob/main/CHANGELOG.md).
+
 ## [1.4.2]
 
 ### Fixed
