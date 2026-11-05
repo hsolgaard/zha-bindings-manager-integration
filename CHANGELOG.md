@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.1]
+
+### Changed
+
+- **Bundled card 1.5.1:** manufacturer-specific clusters (0xFC00 and up) are no longer checked or warned about, and
+  the check after the guided setup is quicker, with a button to skip straight to the button test. See the
+  [card changelog](https://github.com/hsolgaard/zha-bindings-manager/blob/main/CHANGELOG.md).
+
 ## [1.5.0]
 
 ### Added
