@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.2]
+
+### Added
+
+- **Bundled card 1.5.2:** with Experimental features on, the Network tab flags a device using the coordinator's
+  network address (0x0000), or two devices sharing one, which can flood or confuse the whole network. See the
+  [card changelog](https://github.com/hsolgaard/zha-bindings-manager/blob/main/CHANGELOG.md).
+
 ## [1.5.1]
 
 ### Changed
