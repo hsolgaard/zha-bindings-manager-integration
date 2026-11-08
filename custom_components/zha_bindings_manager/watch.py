@@ -41,6 +41,7 @@ from .bindings import BindsGetFailed, describe_binding, identity_key, norm_ieee,
 from .const import DOMAIN, OPT_SIDEBAR_PANEL, PANEL_URL_PATH, SIGNAL_BINDINGS_UPDATED
 from .options import current_options
 from .device_bindings import DeviceBindings
+from .fallback import Fallback
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -125,6 +126,7 @@ class BindingWatch:
         self.tracked: dict[str, dict[str, Any]] = {}
         self._busy: set[str] = set()
         self.pause = PAUSE_BETWEEN_DEVICES
+        self.fallback = Fallback(hass, self)
 
     async def async_load(self) -> None:
         stored = await self._store.async_load()
@@ -138,6 +140,7 @@ class BindingWatch:
             w.setdefault("queued", False)
             w.setdefault("auto_history", [])
             w.setdefault("auto_paused", False)
+            w.setdefault("fallback", False)
         # Per-device issues from before 1.8.0 are replaced by one issue.
         reg = ir.async_get(self.hass)
         for issue_id in [i for (d, i) in list(reg.issues) if d == DOMAIN and i.startswith(OLD_ISSUE_PREFIX)]:
@@ -166,7 +169,7 @@ class BindingWatch:
     def _entry(self, ieee: str) -> dict[str, Any]:
         return self.tracked.setdefault(
             ieee,
-            {"expected": {}, "lost": {}, "policy": DEFAULT_POLICY, "queued": False, "last_check": None, "auto_history": [], "auto_paused": False},
+            {"expected": {}, "lost": {}, "policy": DEFAULT_POLICY, "queued": False, "last_check": None, "auto_history": [], "auto_paused": False, "fallback": False},
         )
 
     # --- reads -------------------------------------------------------------------
@@ -279,7 +282,10 @@ class BindingWatch:
         """A device just sent something, so it's awake."""
         ieee = norm_ieee(event.data.get("device_ieee"))
         w = self.tracked.get(ieee)
-        if not w or not w.get("expected") or w.get("policy") == "off" or ieee in self._busy:
+        if not w or not w.get("expected") or w.get("policy") == "off":
+            return
+        self.fallback.handle(ieee, event.data)
+        if ieee in self._busy:
             return
         if w.get("queued"):
             self.hass.async_create_task(self.async_put_back(ieee))
@@ -400,6 +406,53 @@ class BindingWatch:
         self._save()
         self._update_issue()
 
+    # --- Replace a device (1.9.0) ---------------------------------------------------
+
+    @callback
+    def expect_and_queue(self, ieee: str, bindings: list[dict]) -> None:
+        """Bindings copied to a device that didn't answer (asleep): expect
+        them, mark them missing and queue them, so they go on at its next
+        button press like any lost binding."""
+        ieee = norm_ieee(ieee)
+        w = self._entry(ieee)
+        at = _now().isoformat()
+        for b in bindings:
+            key = identity_key(b)
+            w["expected"][key] = b
+            w["lost"][key] = {"since": at, "noticed_by": "replace"}
+        if w.get("policy") == "off":
+            w["policy"] = DEFAULT_POLICY
+        w["queued"] = True
+        self._save()
+        self._update_issue()
+
+    @callback
+    def adopt(self, ieee: str) -> None:
+        """After copying bindings to a device and reading it back: what it
+        has now is what's expected from here on."""
+        ieee = norm_ieee(ieee)
+        present = relationship_map((self.data.scans.get(ieee) or {}).get("bindings"), self.data.coordinator)
+        self._apply_read(ieee, present, "replace")
+        w = self._entry(ieee)
+        w["last_check"] = _now().isoformat()
+        self._save()
+        self._update_issue()
+
+    @callback
+    def retire(self, ieee: str) -> None:
+        """The old device of a replacement: stop watching it, so its
+        bindings aren't reported as lost."""
+        if self.tracked.pop(norm_ieee(ieee), None) is not None:
+            self._save()
+            self._update_issue()
+
+    @callback
+    def set_fallback(self, ieee: str, enabled: bool) -> None:
+        """Switch the lights from Home Assistant if a press doesn't reach them."""
+        w = self._entry(norm_ieee(ieee))
+        w["fallback"] = bool(enabled)
+        self._save()
+
     @callback
     def set_policy(self, ieee: str, policy: str) -> None:
         if policy not in POLICIES:
@@ -420,7 +473,7 @@ class BindingWatch:
         group_names, _ = self.data.groups()
         devices = {}
         for ieee, w in self.tracked.items():
-            if not w.get("expected") and w.get("policy", DEFAULT_POLICY) == DEFAULT_POLICY:
+            if not w.get("expected") and w.get("policy", DEFAULT_POLICY) == DEFAULT_POLICY and not w.get("fallback"):
                 continue
             exp = w.get("expected") or {}
             devices[ieee] = {
@@ -434,6 +487,7 @@ class BindingWatch:
                 ],
                 "queued": bool(w.get("queued")),
                 "auto_paused": bool(w.get("auto_paused")),
+                "fallback": bool(w.get("fallback")),
                 "last_check": w.get("last_check"),
             }
         return {"devices": devices}

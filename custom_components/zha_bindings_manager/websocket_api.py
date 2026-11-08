@@ -85,6 +85,10 @@ def async_register_websocket_commands(hass: HomeAssistant) -> None:
 
     for command in WATCH_COMMANDS:
         websocket_api.async_register_command(hass, command)
+    from .replace_api import COMMANDS as REPLACE_COMMANDS
+
+    for command in REPLACE_COMMANDS:
+        websocket_api.async_register_command(hass, command)
 
 
 def _get_store(hass: HomeAssistant) -> storage.Store:
@@ -132,6 +136,7 @@ async def websocket_get_capabilities(
                 "binding_watch": opts[OPT_WATCH],
                 "logbook_attribution": opts[OPT_LOGBOOK],
                 "experimental_features": opts[OPT_EXPERIMENTAL],
+                "replace": hass.data.get(DOMAIN, {}).get("replacer") is not None,
             },
             "lqi_thresholds": {"good": opts[OPT_LQI_GOOD], "weak": opts[OPT_LQI_WEAK]},
         },

@@ -153,6 +153,8 @@ class ActivityCounter:
     # --- attaching to ZHA ------------------------------------------------------------
 
     def _current_app(self) -> Any:
+        if "zha" not in self.hass.config.components:
+            return None  # importing ZHA before it's set up blocks the event loop
         try:
             from homeassistant.components.zha.helpers import get_zha_gateway  # type: ignore
 

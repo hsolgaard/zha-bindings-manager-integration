@@ -96,6 +96,19 @@ async def websocket_watch_check_all(hass: HomeAssistant, connection: websocket_a
     connection.send_result(msg["id"], {"results": results, **watch.summary()})
 
 
+@websocket_api.websocket_command(
+    {vol.Required("type"): f"{DOMAIN}/watch_fallback", vol.Required("ieee"): _ieee, vol.Required("enabled"): bool}
+)
+@websocket_api.require_admin
+@callback
+def websocket_watch_fallback(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    watch = _watch(hass, connection, msg["id"])
+    if watch is None:
+        return
+    watch.set_fallback(msg["ieee"], msg["enabled"])
+    connection.send_result(msg["id"], watch.summary())
+
+
 COMMANDS = (
     websocket_watch_get,
     websocket_watch_removed,
@@ -103,4 +116,5 @@ COMMANDS = (
     websocket_watch_forget,
     websocket_watch_policy,
     websocket_watch_check_all,
+    websocket_watch_fallback,
 )

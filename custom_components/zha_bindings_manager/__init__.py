@@ -53,6 +53,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry.async_on_unload(async_setup_removal_watch(hass))
 
     domain_data.pop("device_bindings", None)
+    domain_data.pop("replacer", None)
     domain_data.pop("watch", None)
     domain_data.pop("attribution", None)
     domain_data.pop("activity", None)
@@ -67,6 +68,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         device_bindings = DeviceBindings(hass)
         domain_data["device_bindings"] = device_bindings
         await device_bindings.async_load()
+        from .replace import Replacer
+
+        domain_data["replacer"] = Replacer(hass, device_bindings)
         if options[OPT_WATCH]:
             from .watch import BindingWatch
 
@@ -123,6 +127,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async_unload_frontend(hass)
     domain_data = hass.data.get(DOMAIN, {})
     domain_data.pop("device_bindings", None)
+    domain_data.pop("replacer", None)
     domain_data.pop("watch", None)
     domain_data.pop("attribution", None)
     domain_data.pop("activity", None)

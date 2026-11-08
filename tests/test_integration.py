@@ -101,6 +101,7 @@ async def test_capabilities_report_versions_and_features(hass: HomeAssistant, ha
         "binding_watch": True,
         "logbook_attribution": False,
         "experimental_features": False,
+        "replace": True,
     }
 
 
