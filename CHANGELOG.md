@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.6.0]
+
+### Changed
+
+- **Bundled card 1.6.0:** **Control lights with this…** is now **Set up what this controls…**. It asks whether a
+  remote controls the devices directly or through a group (and suggests one), can set up blinds and curtains
+  (Window Covering), never puts a device without the Groups cluster in a group, and no longer limits direct
+  binding to 4 devices. The Advanced tab no longer reports a failed bind that worked, and a battery remote's
+  endpoints and clusters can be shared even when the command check doesn't finish. Thanks to HarvsG
+  (zigbee-capabilities#384, #387). See the
+  [card changelog](https://github.com/hsolgaard/zha-bindings-manager/blob/main/CHANGELOG.md).
+
 ## [1.5.2]
 
 ### Added
