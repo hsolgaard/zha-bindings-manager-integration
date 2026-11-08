@@ -37,7 +37,7 @@ class RescanBindingsButton(ButtonEntity):
         # flow tested) without waiting for the nightly run.
         watch = get_watch(self.hass)
         if watch is not None and (watch.tracked.get(self._ieee) or {}).get("expected"):
-            if await watch.async_check_device(self._ieee) is None:
+            if await watch.async_check_device(self._ieee, "scan") is None:
                 raise HomeAssistantError(
                     "The device didn't answer. Battery devices are usually asleep: press a button on it, then try again."
                 )

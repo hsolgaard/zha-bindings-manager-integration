@@ -98,7 +98,7 @@ async def test_capabilities_report_versions_and_features(hass: HomeAssistant, ha
         "load_card_everywhere": False,
         "removal_notices": True,
         "device_page_bindings": True,
-        "binding_watch": False,
+        "binding_watch": True,
         "logbook_attribution": False,
         "experimental_features": False,
     }

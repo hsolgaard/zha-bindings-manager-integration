@@ -8,8 +8,9 @@ Configure:
   - a notice when a removed ZHA device still has bindings pointing to it,
   - bindings on each bound ZHA device's own page: a "Bindings" sensor and a
     "Rescan bindings" button (1.2.0),
-  - a nightly check that raises a Repairs issue when a binding disappears,
-    with Re-apply (1.3.0, off by default),
+  - watching for lost bindings: every read of a device is compared with what
+    it had, with Put back (automatically per device if chosen), in the card
+    and in Repairs (1.3.0, reworked and on by default in 1.8.0),
   - logbook entries naming the remote that switched a light over a direct
     binding (1.4.0, off by default),
   - with Experimental features on: the Network tab's routing and neighbour
@@ -94,6 +95,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry.async_on_unload(hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, _check_after_start))
 
     entry.async_on_unload(entry.add_update_listener(_async_options_updated))
+    return True
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """1.8.0: "Check bindings every night" becomes "Watch for lost bindings",
+    on by default; turned on once for existing installs too (it can be
+    turned off again under Configure)."""
+    if entry.version == 1 and entry.minor_version < 2:
+        options = {**(entry.options or {}), OPT_WATCH: True}
+        hass.config_entries.async_update_entry(entry, options=options, minor_version=2)
     return True
 
 

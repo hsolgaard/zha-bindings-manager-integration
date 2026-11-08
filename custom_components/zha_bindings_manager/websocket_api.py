@@ -81,6 +81,10 @@ def async_register_websocket_commands(hass: HomeAssistant) -> None:
     from .activity import websocket_activity_get
 
     websocket_api.async_register_command(hass, websocket_activity_get)
+    from .watch_api import COMMANDS as WATCH_COMMANDS
+
+    for command in WATCH_COMMANDS:
+        websocket_api.async_register_command(hass, command)
 
 
 def _get_store(hass: HomeAssistant) -> storage.Store:
