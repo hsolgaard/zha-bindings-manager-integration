@@ -101,6 +101,7 @@ Go to **Settings → Devices & services → ZHA Bindings Manager → Configure**
 | **Show bindings on each device's page** | On | See [Bindings on device pages](#bindings-on-device-pages). |
 | **Watch for lost bindings** | On | See [Lost bindings](#lost-bindings). |
 | **Say in the logbook which remote switched a light** | Off | See [Which remote switched it?](#which-remote-switched-it) |
+| **Record address changes and missed presses** | On | See [Address changes and missed presses](#address-changes-and-missed-presses). |
 | **Experimental features** | Off | A **Network** tab in the card (beta), a route check for each binding and a count of messages per device. See [Network tab (experimental)](#network-tab-experimental). |
 | **Link quality: good from / weak below** | 150 / 80 | Thresholds for colouring links on the Network tab. **Reset** goes back to the recommended values. |
 
@@ -157,6 +158,21 @@ Bindings can vanish without anyone noticing: a device is factory reset or re-pai
 - **Putting back** binds them again with zha-toolkit and reads the device to check. A battery device that's asleep is queued and done at its next button press.
 - **Per device** in the card's side panel: **Off**, **Tell me** (default) or **Put back automatically**. Automatic put-back happens straight away (or at the next button press), is logged, and stops after 3 times in a day with a Repairs issue instead: something keeps removing them.
 - **Switch the lights from Home Assistant if a press doesn't reach them** (per remote, off by default): when the remote sends On, Off or Toggle and a light it's bound to directly hasn't changed within 2 seconds, Home Assistant switches it, logs it, and checks the remote's bindings straight away. Not for group bindings (a light missing one group message hasn't lost a binding), and Toggle only when the lights were all on or all off before the press. Needs lights that report their state promptly.
+
+## Address changes and missed presses
+
+Read-only evidence for bindings that stop working although they're still in the remote's table (one theory: the
+light's short network address changed and a battery remote keeps sending to the old one).
+
+- **Addresses:** every device's short network address is read from ZHA (in memory, no radio traffic) every 5 minutes,
+  and straight away when zigpy reports a device joining or rejoining. Only changes are kept, for 90 days, in
+  `.storage/zha_bindings_manager/evidence`.
+- **Missed presses:** when a remote sends On, Off or Toggle (Home Assistant hears it through the remote's binding to
+  the coordinator), each light bound to it directly is checked after 2 seconds. A light that didn't follow is logged
+  with its address now, its address at the last press that worked, and whether the binding was in the remote's last
+  read table. Needs lights that report their state; Toggle is only judged when the lights agreed before the press.
+- The card shows it, and can prepare an anonymised report for the community database that you review before
+  submitting. Websocket command `zha_bindings_manager/evidence_get` (admin).
 
 ## Replace a device
 

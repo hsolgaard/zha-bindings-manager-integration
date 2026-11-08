@@ -30,7 +30,7 @@ from .bindings import norm_ieee
 
 _LOGGER = logging.getLogger(__name__)
 
-FALLBACK_WAIT = 2.0
+FALLBACK_WAIT = 2.2  # just after the press check in evidence.py (2.0 s), so it sees the light first
 CHANGED_SLACK = timedelta(seconds=1)
 ON_OFF = 0x0006
 COMMANDS = ("on", "off", "toggle")

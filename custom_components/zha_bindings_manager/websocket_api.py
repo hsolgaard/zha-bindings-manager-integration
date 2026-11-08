@@ -85,6 +85,7 @@ def async_register_websocket_commands(hass: HomeAssistant) -> None:
 
     for command in WATCH_COMMANDS:
         websocket_api.async_register_command(hass, command)
+    websocket_api.async_register_command(hass, websocket_evidence_get)
     from .replace_api import COMMANDS as REPLACE_COMMANDS
 
     for command in REPLACE_COMMANDS:
@@ -137,6 +138,7 @@ async def websocket_get_capabilities(
                 "logbook_attribution": opts[OPT_LOGBOOK],
                 "experimental_features": opts[OPT_EXPERIMENTAL],
                 "replace": hass.data.get(DOMAIN, {}).get("replacer") is not None,
+                "evidence": hass.data.get(DOMAIN, {}).get("evidence") is not None,
             },
             "lqi_thresholds": {"good": opts[OPT_LQI_GOOD], "weak": opts[OPT_LQI_WEAK]},
         },
@@ -231,3 +233,17 @@ async def websocket_device_scans(
         clean, _dropped = sanitize_stored_bindings({ieee: scan.get("bindings") or []})
         out[norm_ieee(ieee)] = {"at": scan["at"], "bindings": clean.get(norm_ieee(ieee), []), "partial": bool(scan.get("partial"))}
     connection.send_result(msg["id"], {"scans": out})
+
+
+@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/evidence_get"})
+@websocket_api.require_admin
+@callback
+def websocket_evidence_get(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """1.10.0: short-address history and missed presses (evidence.py)."""
+    from .evidence import get_evidence
+
+    ev = get_evidence(hass)
+    if ev is None:
+        connection.send_error(msg["id"], "not_enabled", 'Turn on "Record address changes and missed presses" under Configure.')
+        return
+    connection.send_result(msg["id"], ev.result())

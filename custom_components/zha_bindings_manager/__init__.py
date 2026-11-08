@@ -26,7 +26,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
 from homeassistant.core import CoreState, Event, HomeAssistant
 
-from .const import DOMAIN, OLD_TITLE, OPT_DEVICE_PAGE, OPT_EXPERIMENTAL, OPT_LOGBOOK, OPT_REMOVAL_NOTICES, OPT_WATCH, PLATFORMS, TITLE
+from .const import DOMAIN, OLD_TITLE, OPT_DEVICE_PAGE, OPT_EVIDENCE, OPT_EXPERIMENTAL, OPT_LOGBOOK, OPT_REMOVAL_NOTICES, OPT_WATCH, PLATFORMS, TITLE
 from .device_bindings import DeviceBindings
 from .duplicate_check import async_check_card_installed_twice
 from .card_frontend import async_setup_frontend, async_unload_frontend
@@ -54,6 +54,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     domain_data.pop("device_bindings", None)
     domain_data.pop("replacer", None)
+    domain_data.pop("evidence", None)
     domain_data.pop("watch", None)
     domain_data.pop("attribution", None)
     domain_data.pop("activity", None)
@@ -64,7 +65,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         activity = ActivityCounter(hass)
         domain_data["activity"] = activity
         entry.async_on_unload(activity.async_start())
-    if options[OPT_DEVICE_PAGE] or options[OPT_WATCH] or options[OPT_LOGBOOK]:
+    if options[OPT_DEVICE_PAGE] or options[OPT_WATCH] or options[OPT_LOGBOOK] or options[OPT_EVIDENCE]:
         device_bindings = DeviceBindings(hass)
         domain_data["device_bindings"] = device_bindings
         await device_bindings.async_load()
@@ -78,6 +79,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             await watch.async_load()
             domain_data["watch"] = watch
             entry.async_on_unload(watch.async_start())
+        if options[OPT_EVIDENCE]:
+            from .evidence import Evidence
+
+            evidence = Evidence(hass, device_bindings)
+            await evidence.async_load()
+            domain_data["evidence"] = evidence
+            entry.async_on_unload(evidence.async_start())
         if options[OPT_LOGBOOK]:
             from .attribution import BindingAttribution
 
@@ -128,6 +136,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     domain_data = hass.data.get(DOMAIN, {})
     domain_data.pop("device_bindings", None)
     domain_data.pop("replacer", None)
+    domain_data.pop("evidence", None)
     domain_data.pop("watch", None)
     domain_data.pop("attribution", None)
     domain_data.pop("activity", None)
