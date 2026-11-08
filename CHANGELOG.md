@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.6.1]
+
+### Fixed
+
+- **Bundled card 1.6.1:** the guided setup's "What other users found" now only counts reports for the clusters
+  being bound, so earlier Level Control reports for a remote no longer warn against setting it up with a blind.
+  Thanks to HarvsG (zigbee-capabilities#387). See the
+  [card changelog](https://github.com/hsolgaard/zha-bindings-manager/blob/main/CHANGELOG.md).
+
 ## [1.6.0]
 
 ### Changed
