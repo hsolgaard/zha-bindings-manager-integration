@@ -1,6 +1,23 @@
 # Changelog
 
-## [1.9.0]
+## [1.10.0]
+
+### Added
+
+- **Record address changes and missed presses** (new option, on by default; read-only). Every device's short network
+  address is read from ZHA every 5 minutes and when zigpy reports a join or rejoin, and only changes are kept (90
+  days). When a remote sends On, Off or Toggle, each light bound to it directly is checked after 2 seconds; a missed
+  press is logged with the light's address now and at the last press that worked. Websocket command `evidence_get`.
+  Nothing is sent to any device. To find out whether address changes explain bindings that stop working although
+  they're still in the table (reported by HarvsG).
+- **Bundled card 1.10.0**, with the notice, details and the anonymised network report. See the
+  [card changelog](https://github.com/hsolgaard/zha-bindings-manager/blob/main/CHANGELOG.md).
+
+### Changed
+
+- **Switch the lights from Home Assistant…** waits 2.2 seconds, so the missed-press check sees the light first.
+
+
 
 Rolls up what was tested as 1.7.0, 1.8.0 and 1.9.0 betas.
 

@@ -15,7 +15,7 @@ STORAGE_KEY = f"{DOMAIN}/state"
 
 # Kept equal to manifest.json "version" and to the bundled card's version
 # (frontend/card_version.json). A test fails if they ever differ.
-BACKEND_VERSION = "1.9.0"
+BACKEND_VERSION = "1.10.0"
 
 TITLE = "ZHA Bindings Manager"
 OLD_TITLE = "ZHA Bindings Manager Backend"
@@ -46,6 +46,7 @@ OPT_DEVICE_PAGE = "device_page_bindings"
 OPT_WATCH = "binding_watch"
 OPT_LOGBOOK = "logbook_attribution"
 OPT_EXPERIMENTAL = "experimental_features"
+OPT_EVIDENCE = "record_evidence"
 OPT_LQI_GOOD = "lqi_good"
 OPT_LQI_WEAK = "lqi_weak"
 # Recommended link-quality thresholds (experimental route check / network map).
@@ -60,6 +61,7 @@ DEFAULT_OPTIONS = {
     OPT_WATCH: True,
     OPT_LOGBOOK: False,
     OPT_EXPERIMENTAL: False,
+    OPT_EVIDENCE: True,
     OPT_LQI_GOOD: LQI_GOOD_DEFAULT,
     OPT_LQI_WEAK: LQI_WEAK_DEFAULT,
 }
