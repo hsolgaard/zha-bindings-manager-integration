@@ -78,6 +78,9 @@ def async_register_websocket_commands(hass: HomeAssistant) -> None:
 
     websocket_api.async_register_command(hass, websocket_mesh_read)
     websocket_api.async_register_command(hass, websocket_mesh_get)
+    from .activity import websocket_activity_get
+
+    websocket_api.async_register_command(hass, websocket_activity_get)
 
 
 def _get_store(hass: HomeAssistant) -> storage.Store:
