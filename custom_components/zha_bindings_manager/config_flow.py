@@ -36,6 +36,8 @@ class ZhaBindingsManagerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for ZHA Bindings Manager."""
 
     VERSION = 1
+    # 1.8.0: "Watch for lost bindings" is on for everyone (see async_migrate_entry).
+    MINOR_VERSION = 2
 
     async def async_step_user(self, user_input: dict | None = None):
         """Single confirmation step, no fields."""

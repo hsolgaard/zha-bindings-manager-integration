@@ -1,5 +1,33 @@
 # Changelog
 
+## [1.9.0]
+
+Rolls up what was tested as 1.7.0, 1.8.0 and 1.9.0 betas.
+
+### Added
+
+- **Watch for lost bindings**, reworked and now **on by default** (existing installs are switched on when they
+  update; turn it off under Configure). Every read of a device's binding table is compared with what it had before,
+  so a card scan no longer quietly accepts a loss, and a binding missing from a successful read is lost straight away.
+  One Repairs issue for the whole network, with **Put them all back**. Per device in the card: Off, Tell me or Put
+  back automatically (at most 3 times a day). Battery devices are put back at their next button press. Requested by
+  HarvsG.
+- **Switch the lights from Home Assistant if a press doesn't reach them** (per remote, off by default): after On,
+  Off or Toggle, a directly bound light that hasn't changed within 2 seconds is switched by Home Assistant, logged,
+  and the remote's bindings are checked while it's awake.
+- **Replace a device**: websocket commands `replace_plan`, `replace_run` and `replace_cleanup` plan the swap from the
+  saved scans (a dead device too), check the new device's clusters in the right role, copy the bindings with a
+  read-back and clean up. Reported as feature `replace` in `get_capabilities`, so Lighting Manager can use it.
+- **Messages to Home Assistant** (Experimental features): counts the messages each device sends to Home Assistant,
+  per minute for the last hour, plus the coordinator's counters, for the card's Network tab.
+
+### Changed
+
+- **Bundled card 1.9.0**, with lost bindings, Replace this device…, device questions and Groups only on devices.
+  See the [card changelog](https://github.com/hsolgaard/zha-bindings-manager/blob/main/CHANGELOG.md).
+- The option **Check bindings every night and tell me when one disappears** is now **Watch for lost bindings**.
+- Tests run on Python 3.14 (Home Assistant 2026.11 needs it).
+
 ## [1.6.1]
 
 ### Fixed

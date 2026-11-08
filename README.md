@@ -99,9 +99,9 @@ Go to **Settings → Devices & services → ZHA Bindings Manager → Configure**
 | **Shared storage** | On | Saves the card's data in Home Assistant, the same in every browser. When off, each browser keeps its own copy. |
 | **Notify when a removed device still has bindings pointing to it** | On | See [Removed-device notices](#removed-device-notices). |
 | **Show bindings on each device's page** | On | See [Bindings on device pages](#bindings-on-device-pages). |
-| **Check bindings every night and tell me when one disappears** | Off | See [Noticing bindings that disappear](#noticing-bindings-that-disappear). |
+| **Watch for lost bindings** | On | See [Lost bindings](#lost-bindings). |
 | **Say in the logbook which remote switched a light** | Off | See [Which remote switched it?](#which-remote-switched-it) |
-| **Experimental features** | Off | A **Network** tab in the card (beta) and a route check for each binding. See [Network tab (experimental)](#network-tab-experimental). |
+| **Experimental features** | Off | A **Network** tab in the card (beta), a route check for each binding and a count of messages per device. See [Network tab (experimental)](#network-tab-experimental). |
 | **Link quality: good from / weak below** | 150 / 80 | Thresholds for colouring links on the Network tab. **Reset** goes back to the recommended values. |
 
 ### Using the card on your own dashboards
@@ -146,18 +146,25 @@ Each ZHA device that controls, or is controlled by, another device or a group ge
 
 The sensor uses the card's most recent scan of each device, or a newer rescan from the device page. The card also picks up those newer reads (and the nightly check's) the next time it opens, so both show the same bindings. Devices whose only bindings go to the coordinator (the routine reporting every device has) get nothing, to keep the number of entities down. To switch it off, untick **Show bindings on each device's page** under Configure.
 
-## Noticing bindings that disappear
+## Lost bindings
 
-Bindings can vanish without anyone noticing: a device is factory reset or re-paired, or loses its binding table after a firmware update. A remote then simply stops working. Turn on **Check bindings every night and tell me when one disappears** under Configure to have the integration watch for this.
+Bindings can vanish without anyone noticing: a device is factory reset or re-paired, or loses its binding table after a firmware update. A remote then simply stops working. **Watch for lost bindings** (on by default) watches for this.
 
-- **What it expects:** the bindings the card last saw on each device. Unbinding something in the card is never reported, because the card's next scan updates what's expected.
-- **When it checks:** at 03:17 every night it reads the binding table of each device that controls another device or a group. Battery devices are usually asleep then, so they're checked the next time they're used (a button press) instead, at most once every 20 hours.
-- **When it tells you:** only when a binding is missing in **two checks in a row**. A device that doesn't answer never counts. The issue appears under **Settings → System → Repairs**, naming the device and the missing bindings.
-- **Checking straight away:** pressing **Rescan bindings** on a device's page counts as a check too, so two rescans after a binding goes missing raise the issue without waiting for the night.
-- **Seeing it in the card:** the Repairs issue has a link that opens the device in ZHA Bindings Manager (when the sidebar page is on).
-- **What you can do:** **Put them back** binds them again with zha-toolkit and reads the device to check (wake a battery device first), or **I removed them on purpose** stops expecting them.
+- **What it expects:** the bindings each device had, starting from the card's scans. Every later read of the device (any card scan, the nightly check, **Rescan bindings** on its device page, a check after a button press) is compared with that first. A binding missing from a successful read is **lost** straight away, and stays expected until it's put back or you say it was removed on purpose. A device that doesn't answer never makes anything lost.
+- **Unbinding in the card** is reported to the integration and is never treated as lost.
+- **When it checks:** at 03:17 every night it reads each watched device. Battery devices are usually asleep then, so they're checked at their next button press instead, at most once every 20 hours.
+- **Where it tells you:** in the card (a banner on the Bindings tab, a **Lost** chip, dashed red lines on the Map, the device's side panel) and as one issue under **Settings → System → Repairs**, whose **Submit** puts them all back.
+- **Putting back** binds them again with zha-toolkit and reads the device to check. A battery device that's asleep is queued and done at its next button press.
+- **Per device** in the card's side panel: **Off**, **Tell me** (default) or **Put back automatically**. Automatic put-back happens straight away (or at the next button press), is logged, and stops after 3 times in a day with a Repairs issue instead: something keeps removing them.
+- **Switch the lights from Home Assistant if a press doesn't reach them** (per remote, off by default): when the remote sends On, Off or Toggle and a light it's bound to directly hasn't changed within 2 seconds, Home Assistant switches it, logs it, and checks the remote's bindings straight away. Not for group bindings (a light missing one group message hasn't lost a binding), and Toggle only when the lights were all on or all off before the press. Needs lights that report their state promptly.
 
-Nothing is ever re-bound automatically. The checks use zha-toolkit, the same as the card.
+## Replace a device
+
+The card's **Replace this device…** uses three admin websocket commands, which other integrations can call too (feature `replace` in `get_capabilities`; Lighting Manager can use it for its own Replace):
+
+- `zha_bindings_manager/replace_plan` `{old_ieee, new_ieee, old_clusters?, new_clusters?, endpoint_map?}`: what the old device did (bindings to it, its own bindings and its groups, from the saved scans, so a dead device works too), each item checked against the new device's clusters in the right role, and a verdict. Clusters are read from ZHA when not given.
+- `zha_bindings_manager/replace_run` `{plan_id, items}`: binds the chosen items and reads each device back. A device that doesn't answer gets them through the lost-bindings queue, at its next button press. Group membership is changed by the card through ZHA's own group commands.
+- `zha_bindings_manager/replace_cleanup` `{plan_id, unbind_old}`: removes the bindings still pointing at the old device and stops watching it.
 
 ## Which remote switched it?
 
@@ -176,6 +183,7 @@ Turn on **Experimental features** under Configure to get a **Network** tab in th
 
 - The latest tables from each router are saved in `.storage/zha_bindings_manager/mesh`, so the map is the same in every browser and survives a reload.
 - Links are coloured with the **Link quality** thresholds under Configure (good from 150, weak below 80 by default).
+- **Messages to Home Assistant:** while Experimental features are on, the integration counts the messages each device sends to Home Assistant (per minute for the last hour, in memory only) and reads the coordinator's counters, so the card can flag a device flooding the network.
 - Experimental features may change or go away in a later release. The card's README describes the [Network tab](https://github.com/hsolgaard/zha-bindings-manager#check-your-zigbee-network-beta-needs-the-integration) in detail.
 
 ## Installed the card from HACS too?
