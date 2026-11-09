@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.10.1]
+
+### Changed
+
+- Bundles card 1.10.1: device questions have a new type for switch modules fitted behind a normal wall switch (no
+  button questions for them), a new question on whether a device responds to remotes bound to it, and "It isn't a
+  router" as an answer for end devices. No change to the integration itself.
+
 ## [1.10.0]
 
 ### Added
