@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.3]
+
+### Changed
+
+- Bundles card 1.10.3: after a setup where the devices didn't respond, **Remove what this set up** removes the bindings
+  (and the group) it added (#41). No change to the integration itself.
+
 ## [1.10.2]
 
 ### Changed
