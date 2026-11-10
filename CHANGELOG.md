@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.10.2]
+
+### Changed
+
+- Bundles card 1.10.2: the sidebar page keeps the selected tab in the address (`/zha-bindings-manager#bindings`), so a
+  reload stays on the same tab and you can link straight to one (#40). Includes 1.10.1's changes (it wasn't released
+  on its own). No change to the integration itself.
+
 ## [1.10.1]
 
 ### Changed
