@@ -492,6 +492,23 @@ class BindingWatch:
             }
         return {"devices": devices}
 
+    def paused_text(self) -> str:
+        """The note about devices whose automatic put-back was stopped, for the
+        Repairs fix form ("" if none)."""
+        names = self.data.names()
+        paused = [
+            names.get(ieee) or ieee
+            for ieee, w in self.tracked.items()
+            if w.get("policy") != "off" and w.get("auto_paused")
+        ]
+        if not paused:
+            return ""
+        return (
+            "\n\nStopped putting bindings back automatically on "
+            + ", ".join(paused)
+            + " after 3 times in 24 hours: it keeps losing them. Check its range, battery or firmware."
+        )
+
     @callback
     def _update_issue(self) -> None:
         names = self.data.names()
@@ -509,13 +526,7 @@ class BindingWatch:
             ir.async_delete_issue(self.hass, DOMAIN, ISSUE_ID)
             return
         link = f"/{PANEL_URL_PATH}" if current_options(self.hass)[OPT_SIDEBAR_PANEL] else None
-        paused_text = (
-            "\n\nStopped putting bindings back automatically on "
-            + ", ".join(paused)
-            + " after 3 times in 24 hours: it keeps losing them. Check its range, battery or firmware."
-            if paused
-            else ""
-        )
+        paused_text = self.paused_text()
         ir.async_create_issue(
             self.hass,
             DOMAIN,

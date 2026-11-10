@@ -56,12 +56,11 @@
     },
     "lost_bindings": {
       "title": "{count} lost Zigbee bindings",
-      "description": "These devices lost bindings they had before:\n\n{devices}\n\nThis happens when a device is factory reset, re-paired, or loses its binding table after a firmware update. A remote or switch then stops controlling its lights.{paused}",
       "fix_flow": {
         "step": {
           "confirm": {
             "title": "Put the lost bindings back",
-            "description": "These devices lost bindings they had before:\n\n{devices}\n\nSubmit binds them again with zha-toolkit and reads each device back to check. Battery devices usually don't answer straight away: their bindings go back on their next button press.{card_link}{result}"
+            "description": "These devices lost bindings they had before:\n\n{devices}\n\nThis happens when a device is factory reset, re-paired, or loses its binding table after a firmware update. A remote or switch then stops controlling its lights.{paused}\n\nSubmit binds them again with zha-toolkit and reads each device back to check. Battery devices usually don't answer straight away: their bindings go back on their next button press.{card_link}{result}"
           }
         },
         "error": {

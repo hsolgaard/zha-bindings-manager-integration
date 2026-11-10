@@ -34,7 +34,8 @@ class LostBindingsFlow(RepairsFlow):
                 lost = watch.lost(ieee)
                 if lost and watch.tracked[ieee].get("policy") != "off":
                     lines.append(f"- {names.get(ieee) or ieee}: {len(lost)}")
-        return {"devices": "\n".join(lines) or "-", "card_link": self._card_link(), "result": extra}
+        paused = watch.paused_text() if watch else ""
+        return {"devices": "\n".join(lines) or "-", "paused": paused, "card_link": self._card_link(), "result": extra}
 
     async def async_step_init(self, user_input=None) -> data_entry_flow.FlowResult:
         # The flow manager passes the issue data as the first input: show the form.

@@ -21,7 +21,7 @@
  * zha_toolkit MUST be installed (via HACS) and working for bind/unbind/scan
  * to function. See README.md for details.
  *
- * Version: 1.10.0
+ * Version: 1.10.2
  */
 (() => {
   // src/capexplorer-constants.js
@@ -78,7 +78,7 @@
 
   // src/constants.js
   var ZTK_DOMAIN = "zha_toolkit";
-  var CARD_VERSION = "1.10.0";
+  var CARD_VERSION = "1.10.2";
   var CHANGELOG_URL = "https://github.com/hsolgaard/zha-bindings-manager/blob/main/CHANGELOG.md";
   var DEFAULT_BINDABLE_OUT_CLUSTERS = [5, 6, 8, 258, 768];
   var MEMBERSHIP_EDGE_COLOR = "#8e24aa";
@@ -1904,12 +1904,13 @@
   // src/questions.json
   var questions_default = {
     schema: 1,
-    version: 1,
+    version: 2,
     about: "Questions about how a Zigbee device behaves in real use: things a capability scan can't show. Shared by every tool that asks them (ZHA Bindings Manager, the issue form, the website). Answers are stored per firmware and per use in each device file under device_answers and summarised in data/answers.json. Ids never change meaning: reword a question freely, but add a new id for a different question.",
     free_text_max: 280,
     device_types: [
       { id: "remote", label: "Remote, button or battery switch (sends commands, no load)" },
       { id: "wall_switch", label: "Wall switch or rocker with a relay (can switch a load)" },
+      { id: "switch_module", label: "Switch module behind a normal wall switch (e.g. Sonoff ZBMINI)" },
       { id: "light", label: "Light, bulb or LED driver" },
       { id: "plug", label: "Plug, socket or in-line relay" },
       { id: "cover", label: "Blind, curtain or shutter motor" },
@@ -1967,6 +1968,11 @@
           { id: "remote_only", label: "Not switching a load: used as a remote" },
           { id: "automations", label: "Buttons for automations only" }
         ],
+        switch_module: [
+          { id: "wired_own_load", label: "Wired to a normal switch, switching its own light" },
+          { id: "decoupled_smart_bulbs", label: "Switch input separated from the relay, controlling smart bulbs" },
+          { id: "zigbee_only", label: "No switch wired to it: switched only over Zigbee" }
+        ],
         light: [
           { id: "main_light", label: "Main room light" },
           { id: "lamp", label: "Lamp" },
@@ -2000,7 +2006,7 @@
         id: "stays_connected",
         topic: "connection",
         text: "Does it stay connected?",
-        types: ["remote", "wall_switch", "light", "plug", "cover", "sensor", "other"],
+        types: ["remote", "wall_switch", "switch_module", "light", "plug", "cover", "sensor", "other"],
         answers: [
           { id: "always", label: "Always" },
           { id: "drops_occasionally", label: "Drops off occasionally" },
@@ -2012,7 +2018,7 @@
         topic: "connection",
         text: "Which routers does it work through?",
         help: "Some devices only stay connected through certain brands of router, or only directly to the coordinator.",
-        types: ["remote", "sensor", "other"],
+        types: ["remote", "switch_module", "sensor", "other"],
         answers: [
           { id: "any", label: "Any router" },
           { id: "some_brands", label: "Only some brands" },
@@ -2024,7 +2030,7 @@
         id: "rejoins",
         topic: "connection",
         text: "If it drops off, does it come back?",
-        types: ["remote", "wall_switch", "light", "plug", "cover", "sensor", "other"],
+        types: ["remote", "wall_switch", "switch_module", "light", "plug", "cover", "sensor", "other"],
         answers: [
           { id: "by_itself", label: "Yes, by itself" },
           { id: "after_press", label: "After a button press" },
@@ -2036,7 +2042,7 @@
         id: "pairing",
         topic: "pairing",
         text: "Did pairing work as the manual says?",
-        types: ["remote", "wall_switch", "light", "plug", "cover", "sensor", "other"],
+        types: ["remote", "wall_switch", "switch_module", "light", "plug", "cover", "sensor", "other"],
         allow_other: true,
         other_label: "It needed a trick (tell us)",
         answers: [
@@ -2049,7 +2055,7 @@
         topic: "direct_control",
         text: "Does it control lights directly when your Zigbee system or Home Assistant is off?",
         help: "Bound straight to the lights, not through an automation.",
-        types: ["remote", "wall_switch"],
+        types: ["remote", "wall_switch", "switch_module"],
         uses: ["control_lights", "scenes", "decoupled_smart_bulbs", "remote_only"],
         answers: [
           { id: "yes", label: "Yes, bound to the lights" },
@@ -2063,7 +2069,7 @@
         topic: "direct_control",
         text: "What does a press send?",
         help: "With Toggle, two remotes on the same light can get out of step; separate On and Off can't.",
-        types: ["remote", "wall_switch"],
+        types: ["remote", "wall_switch", "switch_module"],
         uses: ["control_lights", "scenes", "decoupled_smart_bulbs", "remote_only"],
         answers: [
           { id: "toggle", label: "Toggle" },
@@ -2076,7 +2082,7 @@
         id: "needed_setting",
         topic: "direct_control",
         text: "Did it need a setting changed before it controlled lights directly?",
-        types: ["remote", "wall_switch"],
+        types: ["remote", "wall_switch", "switch_module"],
         uses: ["control_lights", "scenes", "decoupled_smart_bulbs", "remote_only"],
         allow_other: true,
         other_label: "Yes, something else (tell us)",
@@ -2092,7 +2098,7 @@
         id: "presses_arrive",
         topic: "direct_control",
         text: "Does every press arrive?",
-        types: ["remote", "wall_switch"],
+        types: ["remote", "wall_switch", "switch_module"],
         uses: ["control_lights", "scenes", "decoupled_smart_bulbs", "remote_only", "automations"],
         answers: [
           { id: "always", label: "Always" },
@@ -2117,12 +2123,25 @@
         id: "keeps_bindings",
         topic: "direct_control",
         text: "Does it keep its bindings after a battery change, power cut or firmware update?",
-        types: ["remote", "wall_switch"],
+        types: ["remote", "wall_switch", "switch_module"],
         uses: ["control_lights", "scenes", "decoupled_smart_bulbs", "remote_only"],
         answers: [
           { id: "yes", label: "Yes" },
           { id: "lost_them", label: "It lost them" },
           { id: "not_seen", label: "Haven't had one yet" }
+        ]
+      },
+      {
+        id: "responds_to_bindings",
+        topic: "direct_control",
+        text: "Does it respond to remotes bound to it?",
+        help: "Remotes or switches bound straight to it, not through an automation.",
+        types: ["wall_switch", "switch_module", "light", "plug"],
+        answers: [
+          { id: "always", label: "Every time" },
+          { id: "misses_some", label: "Misses some presses" },
+          { id: "stops_until_rebound", label: "Stops responding until bound again" },
+          { id: "not_bound", label: "Nothing is bound to it" }
         ]
       },
       {
@@ -2140,10 +2159,24 @@
         ]
       },
       {
+        id: "input_detached",
+        topic: "relay",
+        text: "Can the switch wired to it be separated from the relay (detached mode)?",
+        help: "Then the wall switch sends commands over Zigbee instead of switching the load itself.",
+        types: ["switch_module"],
+        allow_other: true,
+        other_label: "Yes, some other way (tell us)",
+        answers: [
+          { id: "setting", label: "Yes, a setting in my Zigbee system" },
+          { id: "no", label: "No" },
+          { id: "not_sure", label: "Not sure" }
+        ]
+      },
+      {
         id: "wiring",
         topic: "relay",
         text: "How is it wired?",
-        types: ["wall_switch"],
+        types: ["wall_switch", "switch_module"],
         answers: [
           { id: "with_neutral", label: "With neutral" },
           { id: "no_neutral_fine", label: "Without neutral, works fine" },
@@ -2156,8 +2189,8 @@
         topic: "power_cut",
         text: "What does it do after a power cut?",
         help: "Many devices list a power-on setting that they don't actually honour.",
-        types: ["light", "plug", "wall_switch"],
-        uses: ["main_light", "lamp", "accent", "outdoor", "appliance", "power_monitoring", "router", "wired_own_load", "decoupled_smart_bulbs"],
+        types: ["light", "plug", "wall_switch", "switch_module"],
+        uses: ["main_light", "lamp", "accent", "outdoor", "appliance", "power_monitoring", "router", "wired_own_load", "decoupled_smart_bulbs", "zigbee_only"],
         answers: [
           { id: "last_state", label: "Goes back to how it was" },
           { id: "always_on", label: "Always comes on" },
@@ -2182,10 +2215,11 @@
         id: "router_quality",
         topic: "connection",
         text: "Is it a good router for other devices?",
-        types: ["light", "plug", "wall_switch"],
+        types: ["light", "plug", "wall_switch", "switch_module"],
         answers: [
           { id: "good", label: "Yes" },
           { id: "children_drop", label: "Devices connected through it drop off" },
+          { id: "not_a_router", label: "It isn't a router (it connects through others)" },
           { id: "not_sure", label: "Not sure" }
         ]
       },
@@ -2242,7 +2276,7 @@
         id: "ota",
         topic: "firmware",
         text: "Has your Zigbee system offered it a firmware update?",
-        types: ["remote", "wall_switch", "light", "plug", "cover", "sensor", "other"],
+        types: ["remote", "wall_switch", "switch_module", "light", "plug", "cover", "sensor", "other"],
         answers: [
           { id: "worked", label: "Yes, and it worked" },
           { id: "failed", label: "Yes, but it failed" },
@@ -2255,7 +2289,7 @@
         topic: "firmware",
         text: "Did a firmware update change any of the above?",
         help: "Asked when you answered before on a different firmware.",
-        types: ["remote", "wall_switch", "light", "plug", "cover", "sensor", "other"],
+        types: ["remote", "wall_switch", "switch_module", "light", "plug", "cover", "sensor", "other"],
         after_firmware_change: true,
         allow_other: true,
         other_label: "Yes, something specific (tell us)",
@@ -3161,6 +3195,25 @@
     params.delete("device");
     const s = params.toString();
     return s ? `?${s}` : "";
+  }
+  var TAB_NAMES = {
+    graph: "map",
+    floorplan: "floor-plan",
+    table: "bindings",
+    devices: "devices",
+    groups: "groups",
+    capexplorer: "capabilities",
+    advanced: "advanced",
+    mesh: "network"
+  };
+  function viewFromHash(hash) {
+    const name = String(hash || "").replace(/^#/, "").trim().toLowerCase();
+    if (!name) return null;
+    const hit = Object.entries(TAB_NAMES).find(([, n]) => n === name);
+    return hit ? hit[0] : null;
+  }
+  function hashForView(view) {
+    return `#${TAB_NAMES[view] || TAB_NAMES.graph}`;
   }
 
   // src/group-support.js
@@ -4692,6 +4745,8 @@ a.health-chip-lost { text-decoration:none; cursor:pointer; }
       this._fpListDrag = null;
       this._fpNodeEls = /* @__PURE__ */ new Map();
       this._onResize = debounce(() => this._layoutSvgSize(), 150);
+      this.tabInUrl = false;
+      this._onHashChange = () => this._applyHashView();
     }
     setConfig(config) {
       this._config = config || {};
@@ -4756,10 +4811,12 @@ a.health-chip-lost { text-decoration:none; cursor:pointer; }
     }
     connectedCallback() {
       window.addEventListener("resize", this._onResize);
+      if (this.tabInUrl) window.addEventListener("hashchange", this._onHashChange);
       if (this._hass) this._subscribeRegistry();
     }
     disconnectedCallback() {
       window.removeEventListener("resize", this._onResize);
+      window.removeEventListener("hashchange", this._onHashChange);
       this._unsubscribeRegistry();
     }
     /** Listens for Home Assistant device-registry changes, so a device removed
@@ -4970,6 +5027,12 @@ a.health-chip-lost { text-decoration:none; cursor:pointer; }
       this._evidenceEnabled = !!probe.evidence;
       if (this._api) this._api.watchEnabled = this._watchEnabled;
       this._lqiThr = probe.lqi || { ...LQI_RECOMMENDED };
+      this._experimentalKnown = true;
+      if (this._pendingHashView === "mesh") {
+        this._pendingHashView = null;
+        if (this._experimental && this.shadowRoot && this.shadowRoot.firstChild) this._switchView("mesh");
+        else this._writeHashView(this._view);
+      }
       this._toggleExperimentalUi();
       if (!this._backendAvailable) {
         this._storageMode = "local";
@@ -7223,6 +7286,7 @@ a.health-chip-lost { text-decoration:none; cursor:pointer; }
       if (!root.firstChild) {
         root.innerHTML = SHELL_HTML + `<style>${STYLE}</style>`;
         this._wireShell();
+        if (this.tabInUrl) this._applyHashView();
       }
       this._renderStatus();
       this._renderToolbarState();
@@ -7245,11 +7309,44 @@ a.health-chip-lost { text-decoration:none; cursor:pointer; }
     }
     _switchView(view) {
       this._view = view;
+      this._writeHashView(view);
       this._qa(".tab").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
       const search = this._q("#search");
       if (search) search.style.display = SEARCHABLE_VIEWS.has(view) ? "" : "none";
       this._qa(".view").forEach((v) => v.classList.toggle("active", v.id === `view-${view}`));
       this._render();
+    }
+    /** Opens the tab named in the address (#bindings…), sidebar page only.
+     *  The Network tab exists only with experimental features on, which isn't
+     *  known until the integration has answered: it's opened then, or the
+     *  address falls back to the Map. Unknown names are left alone. */
+    _applyHashView() {
+      if (!this.tabInUrl) return;
+      let hash = "";
+      try {
+        hash = window.location.hash;
+      } catch (e) {
+        return;
+      }
+      const view = viewFromHash(hash);
+      if (!view || view === this._view) return;
+      if (view === "mesh" && !this._experimental) {
+        if (!this._experimentalKnown) this._pendingHashView = "mesh";
+        else this._writeHashView(this._view);
+        return;
+      }
+      this._switchView(view);
+    }
+    /** Puts the selected tab in the address without adding a history entry,
+     *  so Back still leaves the page instead of stepping through tabs. */
+    _writeHashView(view) {
+      if (!this.tabInUrl) return;
+      try {
+        const hash = hashForView(view);
+        if (window.location.hash === hash) return;
+        window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search + hash);
+      } catch (e) {
+      }
     }
     _wireShell() {
       this._qa(".tab").forEach((btn) => {
@@ -13989,6 +14086,7 @@ Used by: ${h.uses.join("; ")}`;
       this._menu = document.createElement("ha-menu-button");
       this.shadowRoot.querySelector(".menu").appendChild(this._menu);
       this._card = document.createElement("zha-binding-map-card");
+      this._card.tabInUrl = true;
       if (typeof this._card.setConfig === "function") {
         this._card.setConfig({ type: "custom:zha-binding-map-card" });
       }
