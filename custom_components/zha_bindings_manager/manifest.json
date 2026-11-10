@@ -1,7 +1,7 @@
 {
   "domain": "zha_bindings_manager",
   "name": "ZHA Bindings Manager",
-  "after_dependencies": ["lovelace", "zha"],
+  "after_dependencies": ["logbook", "lovelace", "zha"],
   "codeowners": ["@hsolgaard"],
   "config_flow": true,
   "dependencies": ["frontend", "http", "panel_custom"],

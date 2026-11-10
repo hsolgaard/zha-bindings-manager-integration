@@ -257,6 +257,8 @@ async def test_auto_stops_after_three_a_day(setup):
     assert watch.tracked[R]["auto_paused"] is True and len(state["bound"]) == AUTO_LIMIT
     issue = _issue(hass)
     assert issue is not None and "keeps losing them" in issue.translation_placeholders["paused"]
+    # The Repairs fix form shows it too (a fixable issue has no description of its own).
+    assert "keeps losing them" in watch.paused_text()
 
 
 async def test_auto_device_checked_after_a_press(setup):

@@ -6,7 +6,14 @@
 
 - Bundles card 1.10.2: the sidebar page keeps the selected tab in the address (`/zha-bindings-manager#bindings`), so a
   reload stays on the same tab and you can link straight to one (#40). Includes 1.10.1's changes (it wasn't released
-  on its own). No change to the integration itself.
+  on its own).
+
+### Fixed
+
+- Two problems Home Assistant's own check (hassfest) reports: the lost-bindings Repairs notice had its own description
+  as well as a fix form, which a fixable notice can't have (its explanation is now in the fix form, including the note
+  about devices whose automatic put-back was stopped), and logbook wasn't listed as a dependency although logbook
+  entries are written (1.4.0).
 
 ## [1.10.1]
 
