@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.10.5]
+
+### Changed
+
+- Bundles card 1.10.5: a light's own binding to a group can be removed from the Bindings tab, the coordinator-address
+  warning says which router lists the device, and links use https://zigbee.solgaard.uk. No change to the integration
+  itself.
+
 ## [1.10.4]
 
 ### Fixed
