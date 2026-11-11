@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.10.7]
+
+### Fixed
+
+- **Messages counter (Experimental):** network-management (ZDO) messages filed under the coordinator, such as its
+  answers to ZHA's network scan of itself, are no longer counted as messages from the coordinator, so they don't set
+  off the card's "messages from 0x0000" warning. They're reported separately as `coordinator_zdo` in
+  `zha_bindings_manager/activity_get`. Bundles card 1.10.7, whose warning now shows which clusters the remaining
+  messages were on.
+
 ## [1.10.6]
 
 ### Added
