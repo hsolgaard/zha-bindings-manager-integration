@@ -23,7 +23,7 @@ class LostBindingsFlow(RepairsFlow):
     def _card_link(self) -> str:
         if not current_options(self.hass)[OPT_SIDEBAR_PANEL]:
             return ""
-        return f"\n\n[Open ZHA Bindings Manager](/{PANEL_URL_PATH}) to choose bindings one by one, or to say one was removed on purpose."
+        return f"\n\n[Open ZHA Bindings Manager](/{PANEL_URL_PATH}#bindings) to choose bindings one by one, or, if you removed one on purpose somewhere else, to say so."
 
     def _placeholders(self, extra: str = "") -> dict[str, str]:
         watch = get_watch(self.hass)

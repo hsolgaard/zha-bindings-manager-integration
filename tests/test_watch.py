@@ -304,3 +304,45 @@ async def test_rescan_button_counts_as_a_check(setup):
     await hass.async_block_till_done()
     assert _issue(hass) is not None
     assert hass.states.get("sensor.rodret_bindings").state == "No bindings"
+
+
+def _gkey(src, gid, cluster=0):
+    b = {"sourceIeee": src, "sourceEndpoint": 1, "clusterId": cluster, "isGroup": True, "groupId": gid}
+    return identity_key(b), b
+
+
+async def test_light_leaving_a_group_drops_its_own_binding_without_it_being_lost(setup):
+    """1.10.4: removing a light from a group (in the card's Groups tab, or in
+    ZHA) makes the light drop its own binding to that group: not lost."""
+    hass, watch, _ = setup
+    names, members = {5: "Test group"}, {5: {L}}
+    watch.data.groups_known = lambda: (names, members)
+    key, b = _gkey(L, 5)
+    w = watch._entry(L)
+    w["expected"] = {key: b}
+    assert watch._apply_read(L, {key: b}, "scan") == []
+    assert w["groups"] == [5]
+    members[5] = set()  # the light left the group, and dropped its binding
+    assert watch._apply_read(L, {}, "nightly") == []
+    assert key not in w["expected"] and not w["lost"]
+
+
+async def test_remote_group_binding_still_watched_and_deleted_group_not_lost(setup):
+    hass, watch, _ = setup
+    names, members = {5: "Test group"}, {5: {L}}
+    watch.data.groups_known = lambda: (names, members)
+    key, b = _gkey(R, 5, 6)
+    w = watch._entry(R)
+    w["expected"] = {**w["expected"], key: b}
+    watch._apply_read(R, dict(w["expected"]), "scan")
+    newly = watch._apply_read(R, {k: v for k, v in w["expected"].items() if k != key}, "nightly")
+    assert newly == [key]  # a remote is never a member of the group it controls: still lost
+    names.pop(5)  # the group was deleted in ZHA: a binding to it is no longer expected
+    watch._apply_read(R, {k: v for k, v in w["expected"].items() if k != key}, "nightly")
+    assert key not in w["expected"] and key not in w["lost"]
+
+
+def test_compare_read_gone_bindings_are_simply_dropped():
+    a = {"sourceIeee": R, "clusterId": 6}
+    exp, lost, newly = compare_read({"a": a, "b": a}, {"b": {"since": "t0"}}, {}, "scan", "t1", gone=lambda k: k == "b")
+    assert newly == ["a"] and set(exp) == {"a"} and set(lost) == {"a"}

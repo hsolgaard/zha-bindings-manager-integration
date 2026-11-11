@@ -104,13 +104,18 @@ def key_matches(key: str, pattern: dict) -> bool:
     except (TypeError, ValueError, AttributeError):
         return False
 
-def compare_read(expected: dict[str, dict], lost: dict[str, dict], present: dict[str, dict], how: str, at: str) -> tuple[dict, dict, list[str]]:
+def compare_read(
+    expected: dict[str, dict], lost: dict[str, dict], present: dict[str, dict], how: str, at: str, gone=None
+) -> tuple[dict, dict, list[str]]:
     """One successful read of a device's table, compared with what it should have.
 
     Returns (expected, lost, newly_lost_keys). Expected bindings absent from
     the read become lost (keeping their first "since"); bindings present are
     no longer lost; new bindings on the device join the expected set (bound
-    elsewhere, e.g. Find & Bind)."""
+    elsewhere, e.g. Find & Bind). gone(key) says a missing binding went for a
+    known reason and isn't lost: it's simply no longer expected (1.10.4)."""
+    if gone is not None:
+        expected = {k: v for k, v in expected.items() if k in present or not gone(k)}
     lost = {k: v for k, v in lost.items() if k in expected and k not in present}
     newly = [k for k in expected if k not in present and k not in lost]
     for k in newly:
@@ -174,17 +179,58 @@ class BindingWatch:
 
     # --- reads -------------------------------------------------------------------
 
+    def _left_group_check(self, ieee: str, known):
+        """1.10.4: a light keeps its own binding to a group it's a member of
+        (e.g. Basic or On/Off reporting) and drops it when it leaves the group.
+        So a missing binding to a group isn't lost when the device was a member
+        of that group at the previous read and isn't any more, or when the
+        group no longer exists in ZHA. Remotes are never members of the groups
+        they control, so their group bindings are still watched. None (check
+        nothing) when ZHA's groups can't be read."""
+        if known is None:
+            return None
+        names, members = known
+        ieee = norm_ieee(ieee)
+        before = {int(g) for g in (self.tracked.get(ieee) or {}).get("groups") or []}
+
+        def gone(key: str) -> bool:
+            target = key.split("|", 3)[-1]
+            if not target.startswith("g:"):
+                return False
+            try:
+                gid = int(target[2:])
+            except ValueError:
+                return False
+            if gid not in names:
+                return True
+            return gid in before and ieee not in members.get(gid, set())
+
+        return gone
+
+    def _remember_groups(self, ieee: str, known) -> None:
+        """The ZHA groups a device is a member of now, for the next read."""
+        if known is not None:
+            _names, members = known
+            ieee = norm_ieee(ieee)
+            self._entry(ieee)["groups"] = sorted(gid for gid, m in members.items() if ieee in m)
+
     @callback
     def _apply_read(self, ieee: str, present: dict[str, dict], how: str, at: str | None = None) -> list[str]:
         """Compares one successful read with the expected set. Returns newly lost keys."""
         w = self._entry(ieee)
+        if not w.get("expected") or w.get("policy") == "off":
+            self._remember_groups(ieee, self.data.groups_known())
         if not w.get("expected"):
             w["expected"], w["lost"] = dict(present), {}
             return []
         if w.get("policy") == "off":
             w["expected"], w["lost"] = {**w["expected"], **present}, {}
             return []
-        w["expected"], w["lost"], newly = compare_read(w["expected"], w.get("lost") or {}, present, how, at or _now().isoformat())
+        known = self.data.groups_known()
+        w["expected"], w["lost"], newly = compare_read(
+            w["expected"], w.get("lost") or {}, present, how, at or _now().isoformat(), gone=self._left_group_check(ieee, known)
+        )
+        self._remember_groups(ieee, known)
         if not w["lost"]:
             w["queued"] = False
         return newly

@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.10.4]
+
+### Fixed
+
+- **A light leaving a group isn't a lost binding.** When a device was a member of a ZHA group at the previous read and
+  isn't any more (removed in the card, in ZHA's own group page or anywhere else), its missing binding to that group is
+  no longer expected instead of being reported as lost. The same applies to a binding to a group that no longer exists.
+  Remotes are never members of the groups they control, so their group bindings are still watched. Bundles card 1.10.4,
+  which reports these removals straight away.
+
+### Changed
+
+- The lost-bindings Repairs notice explains that it's about bindings that disappeared without being removed in ZHA
+  Bindings Manager, and its link opens the Bindings tab.
+
 ## [1.10.3]
 
 ### Changed
