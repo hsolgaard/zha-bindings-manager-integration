@@ -16,6 +16,12 @@ counts what ZHA itself receives, per device, so a chatty device stands out.
   detaches when the entry unloads.
 - Coordinator counters come from the radio library (app.state.counters, e.g.
   EZSP); which ones exist depends on the radio. At most MAX_COUNTERS.
+- Messages "from" the coordinator: zigpy files anything received from address
+  0x0000 (always the coordinator's own address) under the coordinator. Its
+  network-management (ZDO, profile 0) messages are the coordinator talking to
+  itself, e.g. answering ZHA's network scan of the coordinator, so they're
+  kept apart in `coordinator_zdo` (1.10.7) and not flagged. Anything else from
+  0x0000 still counts under the coordinator, where the card flags it.
 - Only with Experimental features on. Only traffic that reaches the
   coordinator is seen: messages between other devices aren't.
 """
@@ -57,6 +63,8 @@ class ActivityCounter:
         self.by_device: dict[str, dict[str, Any]] = {}
         self.started_at = datetime.now(timezone.utc)
         self.dropped_devices = 0
+        # The coordinator's own ZDO messages (see the module docstring)
+        self.coordinator_zdo: dict[str, Any] = {"minutes": {}, "clusters": {}}
         self._app: Any = None
         self._unsub: CALLBACK_TYPE | None = None
 
@@ -64,7 +72,11 @@ class ActivityCounter:
 
     def handle_message(self, device: Any, profile: int, cluster: int, src_ep: int, dst_ep: int, message: bytes) -> None:
         try:
-            self.count(str(device.ieee), getattr(device, "nwk", None), cluster)
+            ieee = str(device.ieee)
+            if profile == 0 and self._is_coordinator(ieee, getattr(device, "nwk", None)):
+                self._tally(self.coordinator_zdo, cluster)
+                return
+            self.count(ieee, getattr(device, "nwk", None), cluster)
         except Exception:  # never let counting break message handling
             _LOGGER.debug("Couldn't count a message", exc_info=True)
 
@@ -81,6 +93,10 @@ class ActivityCounter:
                 entry["nwk"] = int(nwk)
             except (TypeError, ValueError):
                 pass
+        self._tally(entry, cluster, now)
+
+    @staticmethod
+    def _tally(entry: dict[str, Any], cluster: int, now: float | None = None) -> None:
         minute = _minute(now)
         minutes = entry["minutes"]
         minutes[minute] = minutes.get(minute, 0) + 1
@@ -92,6 +108,15 @@ class ActivityCounter:
         cid = int(cluster)
         if cid in clusters or len(clusters) < MAX_CLUSTERS:
             clusters[cid] = clusters.get(cid, 0) + 1
+
+    def _is_coordinator(self, ieee: str, nwk: Any) -> bool:
+        coord = self._coordinator_ieee()
+        if coord is not None:
+            return norm_ieee(ieee) == coord
+        try:
+            return nwk is not None and int(nwk) == 0x0000
+        except (TypeError, ValueError):
+            return False
 
     # --- reading ----------------------------------------------------------------------
 
@@ -113,9 +138,17 @@ class ActivityCounter:
             "window_minutes": WINDOW_MINUTES,
             "coordinator_ieee": self._coordinator_ieee(),
             "by_device": by_device,
+            "coordinator_zdo": self._zdo_snapshot(first, current),
             "dropped_devices": self.dropped_devices,
             "coordinator_counters": self._counters(),
             "attached": self._app is not None,
+        }
+
+    def _zdo_snapshot(self, first: int, current: int) -> dict[str, Any]:
+        entry = self.coordinator_zdo
+        return {
+            "per_minute": [entry["minutes"].get(m, 0) for m in range(first, current + 1)],
+            "clusters": {f"0x{c:04x}": n for c, n in sorted(entry["clusters"].items(), key=lambda kv: -kv[1])},
         }
 
     def _coordinator_ieee(self) -> str | None:

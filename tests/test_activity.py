@@ -112,3 +112,29 @@ async def test_activity_get_returns_counts(hass: HomeAssistant, hass_ws_client):
     assert msg["result"]["window_minutes"] == 60
     assert await hass.config_entries.async_unload(entry.entry_id)
     assert "activity" not in hass.data[DOMAIN]
+
+
+def test_coordinator_zdo_kept_apart(hass: HomeAssistant):
+    """1.10.7: the coordinator's own network-management (ZDO) messages, e.g.
+    replies to ZHA's network scan of the coordinator, aren't counted under the
+    coordinator, so they don't trigger the 0x0000 warning; anything else from
+    0x0000 still is."""
+    c = ActivityCounter(hass)
+    c._app = FakeApp()
+    coord = SimpleNamespace(ieee=COORD.upper(), nwk=0x0000)
+    for _ in range(3):
+        c.handle_message(coord, 0, 0x8031, 0, 0, b"")  # Mgmt_Lqi_rsp
+    c.handle_message(coord, 0, 0x8032, 0, 0, b"")  # Mgmt_Rtg_rsp
+    c.handle_message(coord, 260, 0x0006, 1, 1, b"")  # On/Off from 0x0000: still flagged
+    c.handle_message(SimpleNamespace(ieee=A, nwk=5), 0, 0x8033, 0, 0, b"")  # other devices' ZDO still counted
+    snap = c.snapshot()
+    assert sum(snap["coordinator_zdo"]["per_minute"]) == 4
+    assert list(snap["coordinator_zdo"]["clusters"].items()) == [("0x8031", 3), ("0x8032", 1)]
+    assert snap["by_device"][COORD]["clusters"] == {"0x0006": 1}
+    assert snap["by_device"][A]["clusters"] == {"0x8033": 1}
+
+
+def test_coordinator_zdo_without_app_uses_nwk(hass: HomeAssistant):
+    c = ActivityCounter(hass)
+    c.handle_message(SimpleNamespace(ieee=COORD, nwk=0), 0, 0x8031, 0, 0, b"")
+    assert c.by_device == {} and sum(c.snapshot()["coordinator_zdo"]["per_minute"]) == 1
