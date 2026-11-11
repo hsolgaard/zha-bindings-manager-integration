@@ -103,6 +103,7 @@ async def test_capabilities_report_versions_and_features(hass: HomeAssistant, ha
         "experimental_features": False,
         "replace": True,
         "evidence": True,
+        "direct_unbind": True,
     }
 
 

@@ -27,6 +27,7 @@ from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import storage
 
+from .unbind_api import websocket_unbind
 from .const import (
     BACKEND_VERSION,
     DOMAIN,
@@ -70,6 +71,7 @@ def sanitize_state(state: dict[str, Any]) -> dict[str, Any]:
 def async_register_websocket_commands(hass: HomeAssistant) -> None:
     """Register this integration's three websocket commands."""
     websocket_api.async_register_command(hass, websocket_get_capabilities)
+    websocket_api.async_register_command(hass, websocket_unbind)
     websocket_api.async_register_command(hass, websocket_get_state)
     websocket_api.async_register_command(hass, websocket_save_state)
     from .mesh import websocket_mesh_get, websocket_mesh_read
@@ -139,6 +141,7 @@ async def websocket_get_capabilities(
                 "experimental_features": opts[OPT_EXPERIMENTAL],
                 "replace": hass.data.get(DOMAIN, {}).get("replacer") is not None,
                 "evidence": hass.data.get(DOMAIN, {}).get("evidence") is not None,
+                "direct_unbind": True,
             },
             "lqi_thresholds": {"good": opts[OPT_LQI_GOOD], "weak": opts[OPT_LQI_WEAK]},
         },
