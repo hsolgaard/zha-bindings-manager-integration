@@ -167,6 +167,14 @@ class DeviceBindings:
         except Exception:  # noqa: BLE001
             return None
 
+    def groups_known(self) -> tuple[dict[int, str], dict[int, set[str]]] | None:
+        """Like groups(), but None when ZHA's groups can't be read at all, so
+        "no groups" and "can't tell" aren't confused (1.10.4)."""
+        gw = self._gateway()
+        if gw is None or getattr(gw, "groups", None) is None:
+            return None
+        return self.groups()
+
     def groups(self) -> tuple[dict[int, str], dict[int, set[str]]]:
         """ZHA group names and members, when ZHA's gateway can be asked."""
         names: dict[int, str] = {}

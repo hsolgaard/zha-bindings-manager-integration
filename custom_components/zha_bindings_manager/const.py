@@ -15,7 +15,7 @@ STORAGE_KEY = f"{DOMAIN}/state"
 
 # Kept equal to manifest.json "version" and to the bundled card's version
 # (frontend/card_version.json). A test fails if they ever differ.
-BACKEND_VERSION = "1.10.3"
+BACKEND_VERSION = "1.10.4"
 
 TITLE = "ZHA Bindings Manager"
 OLD_TITLE = "ZHA Bindings Manager Backend"
