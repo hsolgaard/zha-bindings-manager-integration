@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.10.6]
+
+### Added
+
+- **Unbind without zha-toolkit:** new websocket command `zha_bindings_manager/unbind` sends one ZDO Unbind_req itself
+  (source, endpoint, cluster, and a group or a target address and endpoint) and returns what the device answered
+  (SUCCESS, NO_ENTRY, NOT_SUPPORTED, or no answer). It doesn't look the target up, so bindings to devices no longer in
+  ZHA can be removed, which zha-toolkit's binds_remove_all can't do. Admin only. Reported as feature `direct_unbind`;
+  the bundled card 1.10.6 uses it for every unbind.
+
 ## [1.10.5]
 
 ### Changed
