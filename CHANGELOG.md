@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.11.0]
+
+### Changed
+
+- Bundles card 1.11.0: on the Network tab (Experimental), **Route to the coordinator** for any device, an **All floors**
+  layout that draws every floor's plan in one picture, labels that stay readable on any plan size and grow gently when
+  zooming in, and SVG floor plans sized from the file. Requested in issue #49. No changes to the integration's own
+  code: the route comes from the routing tables the network scan already stores.
+
 ## [1.10.7]
 
 ### Fixed

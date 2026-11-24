@@ -195,7 +195,7 @@ Turn on **Say in the logbook which remote switched a light** under Configure, an
 
 ## Network tab (experimental)
 
-Turn on **Experimental features** under Configure to get a **Network** tab in the card, marked *beta*. It reads the routing and neighbour tables of your routers with `zha_toolkit.get_routes_and_neighbours`, only when you click **Scan network** (or read one router from its side panel), and shows link quality on your floor plan, the routes your bindings take, battery devices with their parent router, and suggestions for weak spots. Nothing on the network is changed.
+Turn on **Experimental features** under Configure to get a **Network** tab in the card, marked *beta*. It reads the routing and neighbour tables of your routers with `zha_toolkit.get_routes_and_neighbours`, only when you click **Scan network** (or read one router from its side panel), and shows link quality on your floor plan (one floor or all floors at once), the routes your bindings take, each device's route to the coordinator, battery devices with their parent router, and suggestions for weak spots. Nothing on the network is changed.
 
 - The latest tables from each router are saved in `.storage/zha_bindings_manager/mesh`, so the map is the same in every browser and survives a reload.
 - Links are coloured with the **Link quality** thresholds under Configure (good from 150, weak below 80 by default).
