@@ -13,6 +13,9 @@ Configure:
     and in Repairs (1.3.0, reworked and on by default in 1.8.0),
   - logbook entries naming the remote that switched a light over a direct
     binding (1.4.0, off by default),
+  - device configuration backups: each device's settings saved, viewable,
+    restorable after a re-pair and applicable to another device, and where
+    each device gets its firmware updates from (1.12.0),
   - with Experimental features on: the Network tab's routing and neighbour
     tables (1.5.0) and a count of messages each device sends to Home
     Assistant (1.7.0).
@@ -54,6 +57,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     domain_data.pop("device_bindings", None)
     domain_data.pop("replacer", None)
+    domain_data.pop("settings", None)
     domain_data.pop("evidence", None)
     domain_data.pop("watch", None)
     domain_data.pop("attribution", None)
@@ -70,8 +74,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         domain_data["device_bindings"] = device_bindings
         await device_bindings.async_load()
         from .replace import Replacer
+        from .settings_backup import SettingsBackup
 
         domain_data["replacer"] = Replacer(hass, device_bindings)
+        settings = SettingsBackup(hass, device_bindings)
+        await settings.async_load()
+        domain_data["settings"] = settings
+        entry.async_on_unload(settings.async_start())
         if options[OPT_WATCH]:
             from .watch import BindingWatch
 

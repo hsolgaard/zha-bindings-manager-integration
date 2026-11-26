@@ -182,6 +182,16 @@ The card's **Replace this device…** uses three admin websocket commands, which
 - `zha_bindings_manager/replace_run` `{plan_id, items}`: binds the chosen items and reads each device back. A device that doesn't answer gets them through the lost-bindings queue, at its next button press. Group membership is changed by the card through ZHA's own group commands.
 - `zha_bindings_manager/replace_cleanup` `{plan_id, unbind_old}`: removes the bindings still pointing at the old device and stops watching it.
 
+## Device settings backups and firmware updates
+
+From 1.12.0 (admin websocket commands; features `settings_backup` and `ota_server` in `get_capabilities`):
+
+- `zha_bindings_manager/settings_backup` `{ieee}`: reads every writable attribute ZHA knows on the device's input clusters (zigpy's definitions and its quirk, maker-specific ones with the maker's code) and saves it with its groups, bindings, model and firmware. Mains devices are also backed up after a card scan if the last backup is more than 7 days old. The last 5 are kept, plus the first read after a re-pair (its factory settings).
+- `zha_bindings_manager/settings_get` `{ieee}`, `settings_plan` `{source_ieee, target_ieee, snapshot_id?, before?, endpoint_map?}` (a backup against what a device has now), `settings_apply` `{target_ieee, items}` (writes and reads each back) and `settings_import` `{ieee, snapshot}`.
+- Not saved: Basic, Identify, Groups, Scenes, Time, OTA, Poll Control and Diagnostics clusters, On/Off's on_time and off_wait_time, and attributes ZHA has no definition for.
+- `zha_bindings_manager/ota_server` `{ieee}`: the device's `upgrade_server_id`, where it sends firmware update requests. `ota_claimants`: devices other than the coordinator that list the OTA cluster as an input cluster (they can capture other devices' update requests).
+- A device removed from ZHA and paired again with the same address is noticed (device registry), read about 30 seconds later, and shown as re-paired in `watch_get` with the groups it was in before (`watch_repaired_dismiss` clears it).
+
 ## Which remote switched it?
 
 A remote bound to a light switches it directly, so Home Assistant's logbook normally just says "Spots turned on", with no idea why. Most remotes are also bound to the coordinator when ZHA pairs them (that's how their button presses reach Home Assistant), and a remote sends each command to everything bound for that cluster. So Home Assistant hears the press as well.

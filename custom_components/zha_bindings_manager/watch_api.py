@@ -109,7 +109,20 @@ def websocket_watch_fallback(hass: HomeAssistant, connection: websocket_api.Acti
     connection.send_result(msg["id"], watch.summary())
 
 
+@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/watch_repaired_dismiss", vol.Required("ieee"): _ieee})
+@websocket_api.require_admin
+@callback
+def websocket_watch_repaired_dismiss(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """1.12.0: stop showing "re-paired" for a device."""
+    watch = _watch(hass, connection, msg["id"])
+    if watch is None:
+        return
+    watch.dismiss_repaired(msg["ieee"])
+    connection.send_result(msg["id"], watch.summary())
+
+
 COMMANDS = (
+    websocket_watch_repaired_dismiss,
     websocket_watch_get,
     websocket_watch_removed,
     websocket_watch_put_back,

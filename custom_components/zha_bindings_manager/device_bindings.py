@@ -175,6 +175,30 @@ class DeviceBindings:
             return None
         return self.groups()
 
+    def group_memberships(self, ieee: str) -> list[dict[str, Any]] | None:
+        """The ZHA groups one device's endpoints are members of:
+        [{group_id, endpoint_id, name}], or None when ZHA's groups can't be
+        read (1.12.0, to put a re-paired device back in its groups)."""
+        gw = self._gateway()
+        if gw is None or getattr(gw, "groups", None) is None:
+            return None
+        ieee = norm_ieee(ieee)
+        out: list[dict[str, Any]] = []
+        try:
+            for gid, group in (gw.groups or {}).items():
+                for m in getattr(group, "members", None) or []:
+                    if norm_ieee(str(getattr(getattr(m, "device", None), "ieee", ""))) == ieee:
+                        out.append(
+                            {
+                                "group_id": int(gid),
+                                "endpoint_id": int(getattr(m, "endpoint_id", 1) or 1),
+                                "name": getattr(group, "name", None) or f"group {gid}",
+                            }
+                        )
+        except Exception:  # noqa: BLE001 - internal ZHA API
+            return None
+        return sorted(out, key=lambda g: (g["group_id"], g["endpoint_id"]))
+
     def groups(self) -> tuple[dict[int, str], dict[int, set[str]]]:
         """ZHA group names and members, when ZHA's gateway can be asked."""
         names: dict[int, str] = {}

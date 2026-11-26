@@ -69,7 +69,7 @@ def sanitize_state(state: dict[str, Any]) -> dict[str, Any]:
 
 @callback
 def async_register_websocket_commands(hass: HomeAssistant) -> None:
-    """Register this integration's three websocket commands."""
+    """Register this integration's websocket commands."""
     websocket_api.async_register_command(hass, websocket_get_capabilities)
     websocket_api.async_register_command(hass, websocket_unbind)
     websocket_api.async_register_command(hass, websocket_get_state)
@@ -91,6 +91,11 @@ def async_register_websocket_commands(hass: HomeAssistant) -> None:
     from .replace_api import COMMANDS as REPLACE_COMMANDS
 
     for command in REPLACE_COMMANDS:
+        websocket_api.async_register_command(hass, command)
+    from .settings_api import COMMANDS as SETTINGS_COMMANDS
+    from .ota_api import COMMANDS as OTA_COMMANDS
+
+    for command in (*SETTINGS_COMMANDS, *OTA_COMMANDS):
         websocket_api.async_register_command(hass, command)
 
 
@@ -142,6 +147,8 @@ async def websocket_get_capabilities(
                 "replace": hass.data.get(DOMAIN, {}).get("replacer") is not None,
                 "evidence": hass.data.get(DOMAIN, {}).get("evidence") is not None,
                 "direct_unbind": True,
+                "settings_backup": hass.data.get(DOMAIN, {}).get("settings") is not None,
+                "ota_server": True,
             },
             "lqi_thresholds": {"good": opts[OPT_LQI_GOOD], "weak": opts[OPT_LQI_WEAK]},
         },

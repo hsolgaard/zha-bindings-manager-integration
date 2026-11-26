@@ -23,6 +23,13 @@ Self-Healing".
 - Every night at 03:17 each watched device is read; battery devices that
   don't answer are checked on their next button press after 20 hours.
 - One Repairs issue for the whole network, linking to the card.
+- 1.12.0: a device removed from ZHA and paired again (same IEEE address) is
+  noticed from the device registry. Its table is read about 30 seconds
+  after it's back ("re-paired"), its group memberships from before the
+  removal are remembered so the card can offer to restore them, and the
+  1.10.4 "left a group" rule doesn't apply to that first read: removing a
+  device takes it out of its ZHA groups, so its group bindings would
+  otherwise be dropped instead of being lost.
 """
 from __future__ import annotations
 
@@ -35,7 +42,8 @@ from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers import storage
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.event import async_track_time_change
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.event import async_call_later, async_track_time_change
 
 from .bindings import BindsGetFailed, describe_binding, identity_key, norm_ieee, relationship_map
 from .const import DOMAIN, OPT_SIDEBAR_PANEL, PANEL_URL_PATH, SIGNAL_BINDINGS_UPDATED
@@ -56,6 +64,7 @@ POLICIES = ("off", "notify", "auto")
 DEFAULT_POLICY = "notify"
 ISSUE_ID = "lost_bindings"
 OLD_ISSUE_PREFIX = "binding_missing_"
+REPAIRED_CHECK_DELAY = 30  # seconds: time for ZHA to interview and configure a re-paired device
 
 
 def _now() -> datetime:
@@ -132,6 +141,8 @@ class BindingWatch:
         self._busy: set[str] = set()
         self.pause = PAUSE_BETWEEN_DEVICES
         self.fallback = Fallback(hass, self)
+        self.repaired_delay: float = REPAIRED_CHECK_DELAY
+        self._registry_ieee: dict[str, str] = {}  # device_id -> ieee, for remove events
 
     async def async_load(self) -> None:
         stored = await self._store.async_load()
@@ -159,10 +170,15 @@ class BindingWatch:
 
     @callback
     def async_start(self) -> CALLBACK_TYPE:
+        registry = dr.async_get(self.hass)
+        for zha_entry in self.hass.config_entries.async_entries("zha"):
+            for device in dr.async_entries_for_config_entry(registry, zha_entry.entry_id):
+                self._remember_registry(device)
         unsubs = [
             async_dispatcher_connect(self.hass, SIGNAL_BINDINGS_UPDATED, self.sync_from_card),
             async_track_time_change(self.hass, self._nightly, hour=CHECK_HOUR, minute=CHECK_MINUTE, second=0),
             self.hass.bus.async_listen("zha_event", self._on_zha_event),
+            self.hass.bus.async_listen(dr.EVENT_DEVICE_REGISTRY_UPDATED, self._on_registry_event),
         ]
 
         def stop() -> None:
@@ -170,6 +186,76 @@ class BindingWatch:
                 u()
 
         return stop
+
+    # --- removed and re-paired devices (1.12.0) -----------------------------------
+
+    def _remember_registry(self, device: Any) -> str | None:
+        from .removal_watch import _zha_ieee
+
+        ieee = _zha_ieee(getattr(device, "identifiers", None))
+        if ieee:
+            self._registry_ieee[device.id] = ieee
+        return ieee
+
+    @callback
+    def _on_registry_event(self, event: Event) -> None:
+        action = event.data.get("action")
+        device_id = event.data.get("device_id")
+        if action == "remove":
+            from .removal_watch import _zha_ieee
+
+            ieee = self._registry_ieee.pop(device_id, None) or _zha_ieee((event.data.get("device") or {}).get("identifiers"))
+            if ieee:
+                self.device_removed(ieee)
+            return
+        if action not in ("create", "update"):
+            return
+        device = dr.async_get(self.hass).async_get(device_id)
+        if device is None:
+            return
+        ieee = self._remember_registry(device)
+        if action == "create" and ieee:
+            self.device_added(ieee)
+
+    @callback
+    def device_removed(self, ieee: str) -> None:
+        """Removed from ZHA: remember when, and the groups it was in at its
+        last read (ZHA drops its memberships with it)."""
+        w = self.tracked.get(norm_ieee(ieee))
+        if w is None:
+            return
+        w["removed_at"] = _now().isoformat()
+        w["groups_at_removal"] = list(w.get("group_members") or [])
+        self._save()
+
+    @callback
+    def device_added(self, ieee: str) -> None:
+        """Paired again with the same address: note it and read it shortly."""
+        ieee = norm_ieee(ieee)
+        w = self.tracked.get(ieee)
+        if w is None or not w.get("removed_at"):
+            return
+        w["repaired"] = {"at": _now().isoformat(), "removed_at": w["removed_at"], "groups": list(w.get("groups_at_removal") or [])}
+        self._save()
+        self._update_issue()
+
+        async def _check(_now_dt: Any) -> None:
+            await self.async_check_device(ieee, "repaired", put_back=True)
+            # Its settings as they are after the reset: the factory defaults.
+            settings = self.hass.data.get(DOMAIN, {}).get("settings")
+            if settings is not None:
+                try:
+                    await settings.async_snapshot(ieee, "after_reset")
+                except Exception:  # noqa: BLE001 - a backup is best effort
+                    _LOGGER.debug("Settings read after re-pair of %s failed", ieee, exc_info=True)
+
+        async_call_later(self.hass, self.repaired_delay, _check)
+
+    @callback
+    def dismiss_repaired(self, ieee: str) -> None:
+        w = self.tracked.get(norm_ieee(ieee))
+        if w and w.pop("repaired", None) is not None:
+            self._save()
 
     def _entry(self, ieee: str) -> dict[str, Any]:
         return self.tracked.setdefault(
@@ -208,11 +294,19 @@ class BindingWatch:
         return gone
 
     def _remember_groups(self, ieee: str, known) -> None:
-        """The ZHA groups a device is a member of now, for the next read."""
+        """The ZHA groups a device is a member of now, for the next read.
+        1.12.0: also which endpoint is the member, to restore them after a
+        re-pair. Not updated while the device is removed from ZHA."""
         if known is not None:
             _names, members = known
             ieee = norm_ieee(ieee)
-            self._entry(ieee)["groups"] = sorted(gid for gid, m in members.items() if ieee in m)
+            w = self._entry(ieee)
+            if w.get("removed_at"):
+                return
+            w["groups"] = sorted(gid for gid, m in members.items() if ieee in m)
+            detail = self.data.group_memberships(ieee) if hasattr(self.data, "group_memberships") else None
+            if detail is not None:
+                w["group_members"] = [{"group_id": g["group_id"], "endpoint_id": g["endpoint_id"]} for g in detail]
 
     @callback
     def _apply_read(self, ieee: str, present: dict[str, dict], how: str, at: str | None = None) -> list[str]:
@@ -227,9 +321,27 @@ class BindingWatch:
             w["expected"], w["lost"] = {**w["expected"], **present}, {}
             return []
         known = self.data.groups_known()
+        # 1.12.0: the first read after a removal and re-pair. Removing it from
+        # ZHA took it out of its groups too, so "left a group" doesn't apply.
+        repaired_read = bool(w.get("removed_at"))
+        gone = self._left_group_check(ieee, known)
+        if repaired_read and gone is not None:
+            names = known[0] if known else {}
+
+            def gone(key: str, _names=names) -> bool:
+                target = key.split("|", 3)[-1]
+                if not target.startswith("g:"):
+                    return False
+                try:
+                    return int(target[2:]) not in _names  # only a deleted group
+                except ValueError:
+                    return False
+
         w["expected"], w["lost"], newly = compare_read(
-            w["expected"], w.get("lost") or {}, present, how, at or _now().isoformat(), gone=self._left_group_check(ieee, known)
+            w["expected"], w.get("lost") or {}, present, how, at or _now().isoformat(), gone=gone
         )
+        if repaired_read:
+            w.pop("removed_at", None)
         self._remember_groups(ieee, known)
         if not w["lost"]:
             w["queued"] = False
@@ -519,7 +631,7 @@ class BindingWatch:
         group_names, _ = self.data.groups()
         devices = {}
         for ieee, w in self.tracked.items():
-            if not w.get("expected") and w.get("policy", DEFAULT_POLICY) == DEFAULT_POLICY and not w.get("fallback"):
+            if not w.get("expected") and w.get("policy", DEFAULT_POLICY) == DEFAULT_POLICY and not w.get("fallback") and not w.get("repaired"):
                 continue
             exp = w.get("expected") or {}
             devices[ieee] = {
@@ -536,7 +648,23 @@ class BindingWatch:
                 "fallback": bool(w.get("fallback")),
                 "last_check": w.get("last_check"),
             }
+            if w.get("repaired"):
+                devices[ieee]["repaired"] = self._repaired_summary(ieee, w["repaired"], group_names)
         return {"devices": devices}
+
+    def _repaired_summary(self, ieee: str, rep: dict[str, Any], group_names: dict[int, str]) -> dict[str, Any]:
+        """A re-paired device: when, and the groups it was in before that it
+        isn't in now (still in ZHA)."""
+        known = self.data.groups_known()
+        names = known[0] if known is not None else group_names
+        now = self.data.group_memberships(ieee) if hasattr(self.data, "group_memberships") else None
+        have = {(g["group_id"], g["endpoint_id"]) for g in (now or [])}
+        missing = [
+            {**g, "name": names.get(int(g["group_id"])) or f"group {g['group_id']}"}
+            for g in rep.get("groups") or []
+            if (known is None or int(g["group_id"]) in names) and (int(g["group_id"]), int(g["endpoint_id"])) not in have
+        ]
+        return {"at": rep.get("at"), "removed_at": rep.get("removed_at"), "missing_groups": missing}
 
     def paused_text(self) -> str:
         """The note about devices whose automatic put-back was stopped, for the
