@@ -24,6 +24,8 @@
 
 - After a device was removed from ZHA and paired again, its group bindings were dropped instead of being reported as
   lost: removing it took it out of its groups, which looked like it had left them on purpose (1.10.4's rule).
+- The read that follows a re-paired device is cancelled when the integration is reloaded or removed, instead of
+  being left waiting. Tests now also pass on Home Assistant 2026.10.
 
 ## [1.11.1]
 

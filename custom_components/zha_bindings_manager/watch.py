@@ -142,6 +142,7 @@ class BindingWatch:
         self.pause = PAUSE_BETWEEN_DEVICES
         self.fallback = Fallback(hass, self)
         self.repaired_delay: float = REPAIRED_CHECK_DELAY
+        self._repaired_checks: dict[str, CALLBACK_TYPE] = {}  # pending reads after a re-pair
         self._registry_ieee: dict[str, str] = {}  # device_id -> ieee, for remove events
 
     async def async_load(self) -> None:
@@ -184,6 +185,10 @@ class BindingWatch:
         def stop() -> None:
             for u in unsubs:
                 u()
+            # Don't leave a read after a re-pair waiting once unloaded.
+            for cancel in self._repaired_checks.values():
+                cancel()
+            self._repaired_checks.clear()
 
         return stop
 
@@ -240,6 +245,7 @@ class BindingWatch:
         self._update_issue()
 
         async def _check(_now_dt: Any) -> None:
+            self._repaired_checks.pop(ieee, None)
             await self.async_check_device(ieee, "repaired", put_back=True)
             # Its settings as they are after the reset: the factory defaults.
             settings = self.hass.data.get(DOMAIN, {}).get("settings")
@@ -249,7 +255,10 @@ class BindingWatch:
                 except Exception:  # noqa: BLE001 - a backup is best effort
                     _LOGGER.debug("Settings read after re-pair of %s failed", ieee, exc_info=True)
 
-        async_call_later(self.hass, self.repaired_delay, _check)
+        old = self._repaired_checks.pop(ieee, None)
+        if old is not None:
+            old()
+        self._repaired_checks[ieee] = async_call_later(self.hass, self.repaired_delay, _check)
 
     @callback
     def dismiss_repaired(self, ieee: str) -> None:
