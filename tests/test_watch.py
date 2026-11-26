@@ -392,7 +392,11 @@ async def test_registry_events_drive_removed_and_re_paired(setup, hass_ws_client
     hass, watch, _ = setup
     watch.repaired_delay = 3600  # not reading it in this test
     reg = dr.async_get(hass)
-    dev = reg.async_get_device(identifiers={("zha", R)})
+    # Not async_get_device or reg.devices as a mapping: Home Assistant 2026.10+
+    # deprecates both and fails the test for using them.
+    # Iterating reg.devices gives ids on older versions and entries on newer ones.
+    entries = [reg.async_get(d) if isinstance(d, str) else d for d in reg.devices]
+    dev = next(d for d in entries if ("zha", R) in d.identifiers)
     reg.async_remove_device(dev.id)
     await hass.async_block_till_done()
     assert watch.tracked[R].get("removed_at")
