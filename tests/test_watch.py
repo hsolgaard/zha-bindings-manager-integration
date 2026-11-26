@@ -346,3 +346,68 @@ def test_compare_read_gone_bindings_are_simply_dropped():
     a = {"sourceIeee": R, "clusterId": 6}
     exp, lost, newly = compare_read({"a": a, "b": a}, {"b": {"since": "t0"}}, {}, "scan", "t1", gone=lambda k: k == "b")
     assert newly == ["a"] and set(exp) == {"a"} and set(lost) == {"a"}
+
+
+# --- removed and re-paired devices (1.12.0) ----------------------------------------
+
+
+async def test_re_paired_device_is_read_and_its_group_bindings_are_lost_not_dropped(setup):
+    """Removing a ZBM5 from ZHA took it out of its groups too. Before 1.12.0
+    the "left a group" rule then dropped its group bindings silently."""
+    hass, watch, state = setup
+    watch.repaired_delay = 0
+    names, members = {5: "Lounge"}, {5: {R}}
+    watch.data.groups_known = lambda: (names, members)
+    watch.data.group_memberships = lambda ieee: [{"group_id": 5, "endpoint_id": 1, "name": "Lounge"}] if R in members[5] else []
+    key, b = _gkey(R, 5)
+    w = watch._entry(R)
+    w["expected"] = {**w["expected"], key: b}
+    watch._apply_read(R, dict(w["expected"]), "scan")
+    assert w["group_members"] == [{"group_id": 5, "endpoint_id": 1}]
+
+    watch.device_removed(R)
+    members[5] = set()  # ZHA removed it from its group
+    assert w["removed_at"] and w["groups_at_removal"] == [{"group_id": 5, "endpoint_id": 1}]
+
+    state["table"] = _table()  # factory reset: an empty binding table
+    watch.device_added(R)
+    await hass.async_block_till_done()
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=1))
+    await hass.async_block_till_done()
+
+    lost = {b["key"]: b for b in watch.summary()["devices"][R]["lost"]}
+    assert key in lost and lost[key]["noticed_by"] == "repaired"  # lost, not dropped
+    assert len(lost) == 2  # its binding to the light as well (the coordinator one is ZHA's business)
+    assert "removed_at" not in w  # only the first read after the re-pair is special
+    rep = watch.summary()["devices"][R]["repaired"]
+    assert rep["missing_groups"] == [{"group_id": 5, "endpoint_id": 1, "name": "Lounge"}]
+
+    members[5] = {R}  # the card put it back in its group
+    assert watch.summary()["devices"][R]["repaired"]["missing_groups"] == []
+
+
+async def test_registry_events_drive_removed_and_re_paired(setup, hass_ws_client):
+    from homeassistant.helpers import device_registry as dr
+
+    hass, watch, _ = setup
+    watch.repaired_delay = 3600  # not reading it in this test
+    reg = dr.async_get(hass)
+    dev = reg.async_get_device(identifiers={("zha", R)})
+    reg.async_remove_device(dev.id)
+    await hass.async_block_till_done()
+    assert watch.tracked[R].get("removed_at")
+    zha = hass.config_entries.async_entries("zha")[0]
+    reg.async_get_or_create(config_entry_id=zha.entry_id, identifiers={("zha", R)}, name="Rodret")
+    await hass.async_block_till_done()
+    assert watch.summary()["devices"][R]["repaired"]["at"]
+
+    client = await hass_ws_client(hass)
+    await client.send_json({"id": 40, "type": f"{DOMAIN}/watch_repaired_dismiss", "ieee": R})
+    res = (await client.receive_json())["result"]
+    assert "repaired" not in res["devices"][R]
+
+
+async def test_a_device_added_for_the_first_time_is_not_re_paired(setup):
+    hass, watch, _ = setup
+    watch.device_added(P)
+    assert "repaired" not in watch.tracked.get(P, {})

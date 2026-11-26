@@ -104,6 +104,8 @@ async def test_capabilities_report_versions_and_features(hass: HomeAssistant, ha
         "replace": True,
         "evidence": True,
         "direct_unbind": True,
+        "settings_backup": True,
+        "ota_server": True,
     }
 
 

@@ -1,5 +1,38 @@
 # Changelog
 
+## [1.12.0]
+
+### Added
+
+- **Device settings backups:** the writable attributes ZHA knows on each endpoint (including maker-specific ones such as
+  SONOFF's detach-relay mode) are saved per device, by hand or automatically for mains devices once a week after a scan.
+  They can be compared with what a device has now, written back (each one read back afterwards), applied to another
+  device, exported and imported. New admin websocket commands `settings_get`, `settings_backup`, `settings_plan`,
+  `settings_apply` and `settings_import`.
+- **Re-paired devices:** a device removed from ZHA and paired again with the same address is noticed, its binding table
+  is read about 30 seconds later, and the groups it was in before are remembered so the card can put it back in them.
+  Its settings are read too, as its factory defaults. `watch_repaired_dismiss` clears the notice.
+- **Firmware update servers:** `ota_server` reads where a device sends its firmware update requests, and
+  `ota_claimants` lists devices other than the coordinator that claim to be an update server (the SONOFF
+  ZBM5-3C-80/86 on 1.0.6 does, and blocks updates for devices around it). Each answer is saved with when it was read,
+  and `ota_claimants` returns them all (`results`), for the card's new **OTA server** column.
+- Bundles card 1.12.0, which shows all of the above (with **Restore everything…** for a re-paired device: groups,
+  then settings, then bindings, read back), lost bindings as rows in the Bindings table, and on the Network tab (beta)
+  names that no longer overlap, a Names size setting and smaller devices.
+
+### Fixed
+
+- After a device was removed from ZHA and paired again, its group bindings were dropped instead of being reported as
+  lost: removing it took it out of its groups, which looked like it had left them on purpose (1.10.4's rule).
+
+## [1.11.1]
+
+### Fixed
+
+- Bundles card 1.11.1: after **Put back** or **Put all back**, the side panel, Map and table now update straight away
+  (they could still show a device as controlling nothing until it was rescanned), and the message no longer says
+  "Nothing to put back" when it worked. No changes to the integration's own code.
+
 ## [1.11.0]
 
 ### Changed
