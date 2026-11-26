@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.11.1]
+
+### Fixed
+
+- Bundles card 1.11.1: after **Put back** or **Put all back**, the side panel, Map and table now update straight away
+  (they could still show a device as controlling nothing until it was rescanned), and the message no longer says
+  "Nothing to put back" when it worked. No changes to the integration's own code.
+
 ## [1.11.0]
 
 ### Changed
