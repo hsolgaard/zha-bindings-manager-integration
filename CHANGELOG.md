@@ -17,7 +17,8 @@
   ZBM5-3C-80/86 on 1.0.6 does, and blocks updates for devices around it). Each answer is saved with when it was read,
   and `ota_claimants` returns them all (`results`), for the card's new **Updates from** column.
 - Bundles card 1.12.0, which shows all of the above (with **Restore everything…** for a re-paired device: groups,
-  then settings, then bindings, read back), and lost bindings as rows in the Bindings table.
+  then settings, then bindings, read back), lost bindings as rows in the Bindings table, and on the Network tab (beta)
+  names that no longer overlap, a Names size setting and smaller devices.
 
 ### Fixed
 
