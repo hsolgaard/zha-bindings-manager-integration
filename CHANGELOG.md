@@ -14,7 +14,8 @@
   Its settings are read too, as its factory defaults. `watch_repaired_dismiss` clears the notice.
 - **Firmware update servers:** `ota_server` reads where a device sends its firmware update requests, and
   `ota_claimants` lists devices other than the coordinator that claim to be an update server (the SONOFF
-  ZBM5-3C-80/86 on 1.0.6 does, and blocks updates for devices around it).
+  ZBM5-3C-80/86 on 1.0.6 does, and blocks updates for devices around it). Each answer is saved with when it was read,
+  and `ota_claimants` returns them all (`results`), for the card's new **Updates from** column.
 - Bundles card 1.12.0, which shows all of the above, and lost bindings as rows in the Bindings table.
 
 ### Fixed

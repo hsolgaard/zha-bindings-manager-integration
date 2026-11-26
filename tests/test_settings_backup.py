@@ -283,4 +283,22 @@ async def test_ota_websocket(hass: HomeAssistant, hass_ws_client):
         await client.send_json({"id": 31, "type": f"{DOMAIN}/ota_server", "ieee": NEW})
         server = (await client.receive_json())["result"]
     assert res["claimants"] == [{"ieee": SW, "endpoints": [3]}] and res["coordinator"] == COORD
-    assert server["server"] == SW and server["is_coordinator"] is False
+    assert server["server"] == SW and server["is_coordinator"] is False and server["at"]
+    # The answer is kept, so the Devices tab can show it after a reload.
+    with mock.patch.object(ota_api, "_app", return_value=app):
+        await client.send_json({"id": 32, "type": f"{DOMAIN}/ota_claimants"})
+        saved = (await client.receive_json())["result"]["results"]
+    assert saved[NEW]["server"] == SW and saved[NEW]["at"] == server["at"]
+
+
+async def test_no_answer_is_not_saved_over_a_real_answer(hass: HomeAssistant, hass_ws_client):
+    client = await _client(hass, hass_ws_client)
+    with mock.patch.object(ota_api, "_app", return_value=_app(_ota_device(NEW, COORD))):
+        await client.send_json({"id": 33, "type": f"{DOMAIN}/ota_server", "ieee": NEW})
+        await client.receive_json()
+    with mock.patch.object(ota_api, "_app", return_value=_app(_ota_device(NEW, None))):
+        await client.send_json({"id": 34, "type": f"{DOMAIN}/ota_server", "ieee": NEW})
+        assert (await client.receive_json())["result"]["status"] == "no_answer"
+        await client.send_json({"id": 35, "type": f"{DOMAIN}/ota_claimants"})
+        saved = (await client.receive_json())["result"]["results"]
+    assert saved[NEW]["is_coordinator"] is True

@@ -10,7 +10,9 @@ ZBM5-3C-80/86 on firmware 1.0.6 does this (endpoint 3).
 - ota_claimants: devices other than the coordinator that list OTA as an
   input cluster, from what ZHA knows about them (no radio traffic).
 - ota_server: reads one device's upgrade_server_id (OTA client cluster,
-  attribute 0x0000): the address it sends its update requests to.
+  attribute 0x0000): the address it sends its update requests to. The last
+  answer per device is saved, with when, so the card's Devices tab can show
+  every device's update server after a reload (1.12.0).
 """
 from __future__ import annotations
 
@@ -21,6 +23,8 @@ import voluptuous as vol
 
 from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import storage
+from datetime import datetime, timezone
 
 from .bindings import is_ieee, norm_ieee
 from .const import DOMAIN
@@ -29,6 +33,30 @@ from .settings_backup import _app, _device
 OTA_CLUSTER = 0x0019
 READ_TIMEOUT = 15
 NOT_SET = "ff:ff:ff:ff:ff:ff:ff:ff"
+OTA_STORAGE_KEY = f"{DOMAIN}/ota"
+SAVED_STATUSES = ("ok", "no_ota")  # answers worth keeping; "no answer" isn't one
+
+
+async def _results(hass: HomeAssistant) -> tuple[storage.Store, dict[str, Any]]:
+    """The saved update-server answers, loaded once per run."""
+    data = hass.data.setdefault(DOMAIN, {})
+    if "ota_store" not in data:
+        store = storage.Store(hass, 1, OTA_STORAGE_KEY)
+        loaded = await store.async_load()
+        data["ota_store"] = store
+        data["ota_results"] = loaded if isinstance(loaded, dict) else {}
+    return data["ota_store"], data["ota_results"]
+
+
+async def save_result(hass: HomeAssistant, ieee: str, res: dict[str, Any]) -> dict[str, Any]:
+    """Keeps an answer (with when it was read) and returns it with "at"."""
+    if res.get("status") not in SAVED_STATUSES:
+        return res
+    store, results = await _results(hass)
+    entry = {**res, "at": datetime.now(timezone.utc).isoformat()}
+    results[norm_ieee(ieee)] = entry
+    store.async_delay_save(lambda: results, 1)
+    return entry
 
 
 def _ieee(value: Any) -> str:
@@ -97,10 +125,12 @@ async def read_update_server(app: Any, ieee: str) -> dict[str, Any]:
 @callback
 def websocket_ota_claimants(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
     app = _app(hass)
+    data = hass.data.get(DOMAIN, {})
+    saved = data.get("ota_results") or {}
     if app is None:
-        connection.send_result(msg["id"], {"available": False, "claimants": []})
+        connection.send_result(msg["id"], {"available": False, "claimants": [], "results": saved})
         return
-    connection.send_result(msg["id"], {"available": True, "coordinator": coordinator_ieee(app), "claimants": claimants(app)})
+    connection.send_result(msg["id"], {"available": True, "coordinator": coordinator_ieee(app), "claimants": claimants(app), "results": saved})
 
 
 @websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/ota_server", vol.Required("ieee"): _ieee})
@@ -111,7 +141,8 @@ async def websocket_ota_server(hass: HomeAssistant, connection: websocket_api.Ac
     if app is None:
         connection.send_result(msg["id"], {"status": "zha_unavailable"})
         return
-    connection.send_result(msg["id"], await read_update_server(app, msg["ieee"]))
+    res = await read_update_server(app, msg["ieee"])
+    connection.send_result(msg["id"], await save_result(hass, msg["ieee"], res))
 
 
 COMMANDS = (websocket_ota_claimants, websocket_ota_server)

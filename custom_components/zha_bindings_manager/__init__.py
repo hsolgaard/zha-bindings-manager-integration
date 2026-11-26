@@ -51,6 +51,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     options = options_from(entry)
     await async_setup_frontend(hass, options)
+    from .ota_api import _results as _ota_results
+
+    domain_data.pop("ota_store", None)
+    await _ota_results(hass)  # saved update-server answers (1.12.0)
 
     if options[OPT_REMOVAL_NOTICES]:
         entry.async_on_unload(async_setup_removal_watch(hass))
